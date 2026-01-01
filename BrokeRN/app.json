@@ -1,0 +1,46 @@
+{
+  "expo": {
+    "name": "Broke",
+    "slug": "broke-rn",
+    "version": "1.0.0",
+    "orientation": "portrait",
+    "icon": "./assets/icon.png",
+    "userInterfaceStyle": "light",
+    "newArchEnabled": true,
+    "splash": {
+      "image": "./assets/splash-icon.png",
+      "resizeMode": "contain",
+      "backgroundColor": "#22c55e"
+    },
+    "ios": {
+      "supportsTablet": false,
+      "bundleIdentifier": "com.broke.app",
+      "infoPlist": {
+        "NFCReaderUsageDescription": "This app uses NFC to toggle blocking mode"
+      }
+    },
+    "android": {
+      "package": "com.broke.app",
+      "adaptiveIcon": {
+        "foregroundImage": "./assets/adaptive-icon.png",
+        "backgroundColor": "#22c55e"
+      },
+      "edgeToEdgeEnabled": true,
+      "predictiveBackGestureEnabled": false
+    },
+    "web": {
+      "favicon": "./assets/favicon.png"
+    },
+    "plugins": [
+      [
+        "react-native-nfc-manager",
+        {
+          "nfcPermission": "This app uses NFC to toggle blocking mode",
+          "selectIdentifiers": [],
+          "systemCodes": []
+        }
+      ],
+      "./plugins/withAppBlocker"
+    ]
+  }
+}
