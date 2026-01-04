@@ -116,16 +116,13 @@ export function ScheduleForm({ visible, schedule, onSave, onDelete, onClose }: S
   const [enabled, setEnabled] = useState(schedule?.enabled ?? true);
   const [days, setDays] = useState<number[]>(schedule?.days ?? [1, 2, 3, 4, 5]);
   const [startTime, setStartTime] = useState(schedule?.startTime ?? '09:00');
-  const [endTime, setEndTime] = useState(schedule?.endTime ?? '17:00');
   const [showStartPicker, setShowStartPicker] = useState(false);
-  const [showEndPicker, setShowEndPicker] = useState(false);
 
   React.useEffect(() => {
     if (visible) {
       setEnabled(schedule?.enabled ?? true);
       setDays(schedule?.days ?? [1, 2, 3, 4, 5]);
       setStartTime(schedule?.startTime ?? '09:00');
-      setEndTime(schedule?.endTime ?? '17:00');
     }
   }, [visible, schedule]);
 
@@ -141,7 +138,6 @@ export function ScheduleForm({ visible, schedule, onSave, onDelete, onClose }: S
       enabled,
       days,
       startTime,
-      endTime,
     });
     onClose();
   };
@@ -198,24 +194,14 @@ export function ScheduleForm({ visible, schedule, onSave, onDelete, onClose }: S
           </View>
 
           <View style={styles.section}>
-            <Text style={styles.sectionTitle}>Time</Text>
-            <View style={styles.timeRow}>
-              <TouchableOpacity
-                style={styles.timeButton}
-                onPress={() => setShowStartPicker(true)}
-              >
-                <Text style={styles.timeLabel}>Start</Text>
-                <Text style={styles.timeValue}>{formatTime(startTime)}</Text>
-              </TouchableOpacity>
-              <Ionicons name="arrow-forward" size={20} color="#9ca3af" />
-              <TouchableOpacity
-                style={styles.timeButton}
-                onPress={() => setShowEndPicker(true)}
-              >
-                <Text style={styles.timeLabel}>End</Text>
-                <Text style={styles.timeValue}>{formatTime(endTime)}</Text>
-              </TouchableOpacity>
-            </View>
+            <Text style={styles.sectionTitle}>Start Time</Text>
+            <TouchableOpacity
+              style={styles.timeButton}
+              onPress={() => setShowStartPicker(true)}
+            >
+              <Text style={styles.timeValue}>{formatTime(startTime)}</Text>
+              <Ionicons name="chevron-forward" size={20} color="#9ca3af" />
+            </TouchableOpacity>
           </View>
 
           {isEditing && onDelete && (
@@ -230,12 +216,6 @@ export function ScheduleForm({ visible, schedule, onSave, onDelete, onClose }: S
           value={startTime}
           onSelect={setStartTime}
           onClose={() => setShowStartPicker(false)}
-        />
-        <TimePicker
-          visible={showEndPicker}
-          value={endTime}
-          onSelect={setEndTime}
-          onClose={() => setShowEndPicker(false)}
         />
       </SafeAreaView>
     </Modal>
@@ -257,18 +237,19 @@ const styles = StyleSheet.create({
     borderBottomColor: '#e5e7eb',
   },
   title: {
-    fontSize: 17,
+    fontSize: 18,
     fontWeight: '600',
-    color: '#111827',
+    color: '#1f2937',
   },
   cancelButton: {
-    fontSize: 17,
-    color: '#6b7280',
+    fontSize: 16,
+    fontWeight: '500',
+    color: '#49454f',
   },
   saveButton: {
-    fontSize: 17,
+    fontSize: 16,
     fontWeight: '600',
-    color: '#3b82f6',
+    color: '#0066cc',
   },
   content: {
     flex: 1,
@@ -431,11 +412,12 @@ const styles = StyleSheet.create({
   },
   pickerButtonCancel: {
     fontSize: 16,
-    color: '#6b7280',
+    fontWeight: '500',
+    color: '#49454f',
   },
   pickerButtonSave: {
     fontSize: 16,
     fontWeight: '600',
-    color: '#3b82f6',
+    color: '#0066cc',
   },
 });

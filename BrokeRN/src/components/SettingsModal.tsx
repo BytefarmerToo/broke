@@ -5,10 +5,11 @@ import {
   StyleSheet,
   TouchableOpacity,
   Modal,
-  SafeAreaView,
   Switch,
   Platform,
+  ScrollView,
 } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import Slider from '@react-native-community/slider';
 import { useApp } from '../context/AppContext';
@@ -62,9 +63,12 @@ export function SettingsModal({ visible, onClose }: SettingsModalProps) {
   };
 
   return (
-    <Modal visible={visible} animationType="slide" presentationStyle="pageSheet">
-      <SafeAreaView style={styles.container}>
-        <View style={styles.header}>
+    <Modal visible={visible} animationType="slide" transparent>
+      <View style={styles.modalOverlay}>
+        <View style={styles.modalContent}>
+          <SafeAreaView style={styles.container} edges={['bottom']}>
+            <View style={styles.dragHandle} />
+            <View style={styles.header}>
           <View style={styles.headerSpacer} />
           <Text style={styles.title}>Settings</Text>
           <TouchableOpacity onPress={onClose}>
@@ -72,7 +76,7 @@ export function SettingsModal({ visible, onClose }: SettingsModalProps) {
           </TouchableOpacity>
         </View>
 
-        <View style={styles.content}>
+        <ScrollView style={styles.content} contentContainerStyle={styles.contentContainer}>
           <View style={styles.section}>
             <Text style={styles.sectionTitle}>Hold Duration</Text>
             <Text style={styles.sectionDescription}>
@@ -165,16 +169,38 @@ export function SettingsModal({ visible, onClose }: SettingsModalProps) {
               </TouchableOpacity>
             </View>
           )}
+        </ScrollView>
+          </SafeAreaView>
         </View>
-      </SafeAreaView>
+      </View>
     </Modal>
   );
 }
 
 const styles = StyleSheet.create({
+  modalOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0, 0, 0, 0.5)',
+    justifyContent: 'flex-end',
+  },
+  modalContent: {
+    backgroundColor: '#f3f4f6',
+    borderTopLeftRadius: 20,
+    borderTopRightRadius: 20,
+    maxHeight: '90%',
+    minHeight: '60%',
+  },
+  dragHandle: {
+    width: 36,
+    height: 5,
+    backgroundColor: '#d1d5db',
+    borderRadius: 3,
+    alignSelf: 'center',
+    marginTop: 8,
+    marginBottom: 8,
+  },
   container: {
     flex: 1,
-    backgroundColor: '#f3f4f6',
   },
   header: {
     flexDirection: 'row',
@@ -190,18 +216,21 @@ const styles = StyleSheet.create({
     width: 50,
   },
   title: {
-    fontSize: 17,
+    fontSize: 18,
     fontWeight: '600',
-    color: '#111827',
+    color: '#1f2937',
   },
   doneButton: {
-    fontSize: 17,
+    fontSize: 16,
     fontWeight: '600',
-    color: '#3b82f6',
+    color: '#0066cc',
   },
   content: {
     flex: 1,
+  },
+  contentContainer: {
     padding: 16,
+    paddingBottom: 32,
   },
   section: {
     backgroundColor: '#fff',

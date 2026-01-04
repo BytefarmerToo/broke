@@ -3,7 +3,6 @@ export interface Schedule {
   enabled: boolean;
   days: number[]; // 0 = Sunday, 1 = Monday, ..., 6 = Saturday
   startTime: string; // "HH:MM" format (24-hour)
-  endTime: string; // "HH:MM" format (24-hour)
 }
 
 export interface Profile {
@@ -31,25 +30,26 @@ export function createDefaultSchedule(): Schedule {
     enabled: true,
     days: [1, 2, 3, 4, 5], // Weekdays by default
     startTime: '09:00',
-    endTime: '17:00',
   };
 }
 
-export function isScheduleActive(schedule: Schedule): boolean {
+// Returns true if the schedule has started (current time >= start time on a scheduled day)
+export function hasScheduleStarted(schedule: Schedule): boolean {
   if (!schedule.enabled) return false;
 
   const now = new Date();
   const currentDay = now.getDay();
-  const currentTime = `${now.getHours().toString().padStart(2, '0')}:${now.getMinutes().toString().padStart(2, '0')}`;
 
   if (!schedule.days.includes(currentDay)) return false;
 
-  // Handle overnight schedules (e.g., 22:00 - 06:00)
-  if (schedule.startTime > schedule.endTime) {
-    return currentTime >= schedule.startTime || currentTime < schedule.endTime;
-  }
+  const currentTime = `${now.getHours().toString().padStart(2, '0')}:${now.getMinutes().toString().padStart(2, '0')}`;
+  return currentTime >= schedule.startTime;
+}
 
-  return currentTime >= schedule.startTime && currentTime < schedule.endTime;
+// Returns the start time in minutes for comparison
+export function getScheduleStartMinutes(schedule: Schedule): number {
+  const [hours, minutes] = schedule.startTime.split(':').map(Number);
+  return hours * 60 + minutes;
 }
 
 export function formatTime(time: string): string {

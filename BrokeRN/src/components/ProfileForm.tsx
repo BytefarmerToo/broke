@@ -8,11 +8,11 @@ import {
   ScrollView,
   Alert,
   Modal,
-  SafeAreaView,
   Platform,
   FlatList,
   ActivityIndicator,
 } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { Profile, Schedule, DEFAULT_ICONS, APP_CATEGORIES, SAMPLE_APPS, generateId, DAYS_OF_WEEK, formatTime } from '../types/Profile';
 import { useApp } from '../context/AppContext';
@@ -188,19 +188,22 @@ export function ProfileForm({ visible, profile, onClose }: ProfileFormProps) {
   };
 
   return (
-    <Modal visible={visible} animationType="slide" presentationStyle="pageSheet">
-      <SafeAreaView style={styles.container}>
-        <View style={styles.header}>
-          <TouchableOpacity onPress={onClose}>
-            <Text style={styles.cancelButton}>Cancel</Text>
-          </TouchableOpacity>
-          <Text style={styles.title}>{isEditing ? 'Edit Profile' : 'New Profile'}</Text>
-          <TouchableOpacity onPress={handleSave}>
-            <Text style={styles.saveButton}>Save</Text>
-          </TouchableOpacity>
-        </View>
+    <Modal visible={visible} animationType="slide" transparent>
+      <View style={styles.modalOverlay}>
+        <View style={styles.modalContent}>
+          <SafeAreaView style={styles.container} edges={['bottom']}>
+            <View style={styles.dragHandle} />
+            <View style={styles.header}>
+              <TouchableOpacity onPress={onClose}>
+                <Text style={styles.cancelButton}>Cancel</Text>
+              </TouchableOpacity>
+              <Text style={styles.title}>{isEditing ? 'Edit Profile' : 'New Profile'}</Text>
+              <TouchableOpacity onPress={handleSave}>
+                <Text style={styles.saveButton}>Save</Text>
+              </TouchableOpacity>
+            </View>
 
-        <ScrollView style={styles.content}>
+            <ScrollView style={styles.content}>
           <View style={styles.section}>
             <Text style={styles.sectionTitle}>Profile Name</Text>
             <TextInput
@@ -316,7 +319,7 @@ export function ProfileForm({ visible, profile, onClose }: ProfileFormProps) {
                     styles.scheduleTime,
                     !schedule.enabled && styles.scheduleTextDisabled,
                   ]}>
-                    {formatTime(schedule.startTime)} - {formatTime(schedule.endTime)}
+                    {formatTime(schedule.startTime)}
                   </Text>
                   <Text style={[
                     styles.scheduleDays,
@@ -441,15 +444,37 @@ export function ProfileForm({ visible, profile, onClose }: ProfileFormProps) {
             setEditingSchedule(null);
           }}
         />
-      </SafeAreaView>
+          </SafeAreaView>
+        </View>
+      </View>
     </Modal>
   );
 }
 
 const styles = StyleSheet.create({
+  modalOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0, 0, 0, 0.5)',
+    justifyContent: 'flex-end',
+  },
+  modalContent: {
+    backgroundColor: '#fff',
+    borderTopLeftRadius: 20,
+    borderTopRightRadius: 20,
+    maxHeight: '95%',
+    minHeight: '80%',
+  },
+  dragHandle: {
+    width: 36,
+    height: 5,
+    backgroundColor: '#d1d5db',
+    borderRadius: 3,
+    alignSelf: 'center',
+    marginTop: 8,
+    marginBottom: 8,
+  },
   container: {
     flex: 1,
-    backgroundColor: '#fff',
   },
   header: {
     flexDirection: 'row',
@@ -461,18 +486,19 @@ const styles = StyleSheet.create({
     borderBottomColor: '#e5e7eb',
   },
   title: {
-    fontSize: 17,
+    fontSize: 18,
     fontWeight: '600',
-    color: '#111827',
+    color: '#1f2937',
   },
   cancelButton: {
-    fontSize: 17,
-    color: '#6b7280',
+    fontSize: 16,
+    fontWeight: '500',
+    color: '#49454f',
   },
   saveButton: {
-    fontSize: 17,
+    fontSize: 16,
     fontWeight: '600',
-    color: '#3b82f6',
+    color: '#0066cc',
   },
   content: {
     flex: 1,
@@ -602,8 +628,8 @@ const styles = StyleSheet.create({
   },
   pickerCloseText: {
     fontSize: 16,
-    color: '#3b82f6',
     fontWeight: '600',
+    color: '#0066cc',
   },
   appPickerContainer: {
     flex: 1,
