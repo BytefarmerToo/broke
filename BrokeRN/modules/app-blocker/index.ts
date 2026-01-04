@@ -4,6 +4,8 @@ export interface InstalledApp {
   packageName: string;
   name: string;
   isSystem: boolean;
+  category: number;
+  categoryName: string;
 }
 
 interface AppBlockerModuleType extends NativeModule {
@@ -13,6 +15,10 @@ interface AppBlockerModuleType extends NativeModule {
   isBlocking(): boolean;
   setBlockedPackages(packages: string[]): Promise<boolean>;
   getBlockedPackages(): string[];
+  setBlockedCategories(categories: number[]): Promise<boolean>;
+  getBlockedCategories(): number[];
+  setBlockedAppNames(names: string[]): Promise<boolean>;
+  getBlockedAppNames(): string[];
   getInstalledApps(): InstalledApp[];
   setSchedules(schedulesJson: string): Promise<boolean>;
   setScheduleEnabled(enabled: boolean): Promise<boolean>;
@@ -43,6 +49,22 @@ export function setBlockedPackages(packages: string[]): Promise<boolean> {
 
 export function getBlockedPackages(): string[] {
   return AppBlockerModule.getBlockedPackages();
+}
+
+export function setBlockedCategories(categories: number[]): Promise<boolean> {
+  return AppBlockerModule.setBlockedCategories(categories);
+}
+
+export function getBlockedCategories(): number[] {
+  return AppBlockerModule.getBlockedCategories();
+}
+
+export function setBlockedAppNames(names: string[]): Promise<boolean> {
+  return AppBlockerModule.setBlockedAppNames(names);
+}
+
+export function getBlockedAppNames(): string[] {
+  return AppBlockerModule.getBlockedAppNames();
 }
 
 export function getInstalledApps(): InstalledApp[] {

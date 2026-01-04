@@ -269,6 +269,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
   const syncBlockedPackages = async (profile: Profile) => {
     if (Platform.OS === 'android' && profile.blockedApps) {
       await appBlocker.setBlockedPackages(profile.blockedApps);
+      await appBlocker.setBlockedCategories(profile.blockedCategories);
     }
   };
 
@@ -283,6 +284,8 @@ export function AppProvider({ children }: { children: ReactNode }) {
         days: schedule.days,
         startTime: schedule.startTime,
         blockedPackages: profile.blockedApps,
+        blockedCategories: profile.blockedCategories,
+        blockedAppNames: [],
       }))
     );
 

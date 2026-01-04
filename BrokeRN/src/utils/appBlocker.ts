@@ -5,6 +5,8 @@ export interface InstalledApp {
   packageName: string;
   name: string;
   isSystem: boolean;
+  category: number; // Android category constant (-1 = undefined)
+  categoryName: string;
 }
 
 export interface NativeSchedule {
@@ -13,6 +15,8 @@ export interface NativeSchedule {
   days: number[];
   startTime: string;
   blockedPackages: string[];
+  blockedCategories: number[];
+  blockedAppNames: string[];
 }
 
 class AppBlockerManager {
@@ -74,6 +78,46 @@ class AppBlockerManager {
       return AppBlockerModule.getBlockedPackages();
     } catch (error) {
       console.error('Error getting blocked packages:', error);
+      return [];
+    }
+  }
+
+  async setBlockedCategories(categories: number[]): Promise<boolean> {
+    if (!this.isAndroid) return true;
+    try {
+      return await AppBlockerModule.setBlockedCategories(categories);
+    } catch (error) {
+      console.error('Error setting blocked categories:', error);
+      return false;
+    }
+  }
+
+  getBlockedCategories(): number[] {
+    if (!this.isAndroid) return [];
+    try {
+      return AppBlockerModule.getBlockedCategories();
+    } catch (error) {
+      console.error('Error getting blocked categories:', error);
+      return [];
+    }
+  }
+
+  async setBlockedAppNames(names: string[]): Promise<boolean> {
+    if (!this.isAndroid) return true;
+    try {
+      return await AppBlockerModule.setBlockedAppNames(names);
+    } catch (error) {
+      console.error('Error setting blocked app names:', error);
+      return false;
+    }
+  }
+
+  getBlockedAppNames(): string[] {
+    if (!this.isAndroid) return [];
+    try {
+      return AppBlockerModule.getBlockedAppNames();
+    } catch (error) {
+      console.error('Error getting blocked app names:', error);
       return [];
     }
   }
