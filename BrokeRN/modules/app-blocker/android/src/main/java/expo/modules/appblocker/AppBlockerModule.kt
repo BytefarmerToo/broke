@@ -14,6 +14,9 @@ class AppBlockerModule : Module() {
         private const val PREFS_NAME = "AppBlockerPrefs"
         private const val KEY_BLOCKED_PACKAGES = "blocked_packages"
         private const val KEY_IS_BLOCKING = "is_blocking"
+        private const val KEY_SCHEDULES = "schedules"
+        private const val KEY_SCHEDULE_ENABLED = "schedule_enabled"
+        private const val KEY_MANUAL_LOCK = "manual_lock"
     }
 
     private val context: Context
@@ -60,6 +63,24 @@ class AppBlockerModule : Module() {
 
         Function("getInstalledApps") {
             getInstalledAppsList()
+        }
+
+        AsyncFunction("setSchedules") { schedulesJson: String ->
+            prefs.edit().putString(KEY_SCHEDULES, schedulesJson).apply()
+            AppBlockerService.getInstance()?.setSchedules(schedulesJson)
+            true
+        }
+
+        AsyncFunction("setScheduleEnabled") { enabled: Boolean ->
+            prefs.edit().putBoolean(KEY_SCHEDULE_ENABLED, enabled).apply()
+            AppBlockerService.getInstance()?.setScheduleEnabled(enabled)
+            true
+        }
+
+        AsyncFunction("setManualLock") { manual: Boolean ->
+            prefs.edit().putBoolean(KEY_MANUAL_LOCK, manual).apply()
+            AppBlockerService.getInstance()?.setManualLock(manual)
+            true
         }
     }
 

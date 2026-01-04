@@ -1,6 +1,6 @@
-import NfcManager, { NfcTech, Ndef } from 'react-native-nfc-manager';
+import NfcManager, { NfcTech, Ndef } from "react-native-nfc-manager";
 
-const NFC_PAYLOAD = 'BROKE-IS-GREAT';
+const NFC_PAYLOAD = "BROKE-IS-GREAT";
 
 export async function initNfc(): Promise<boolean> {
   try {
@@ -10,40 +10,79 @@ export async function initNfc(): Promise<boolean> {
     }
     return isSupported;
   } catch (error) {
-    console.error('NFC init error:', error);
+    console.error("NFC init error:", error);
     return false;
   }
 }
 
-export async function readNfcTag(): Promise<{ success: boolean; isValid: boolean; message?: string }> {
+const handleTag = (
+  tag: any
+): {
+  success: boolean;
+  isValid: boolean;
+  message?: string;
+} => {
+  console.warn("Handling tag start", tag);
+  if (!tag?.ndefMessage || tag.ndefMessage.length === 0) {
+    console.warn("No NDEF message found on tag");
+    return {
+      success: true,
+      isValid: false,
+      message: "No NDEF message found on tag",
+    };
+  }
+
   try {
-    await NfcManager.requestTechnology(NfcTech.Ndef);
-    const tag = await NfcManager.getTag();
-
-    if (!tag?.ndefMessage || tag.ndefMessage.length === 0) {
-      return { success: true, isValid: false, message: 'No NDEF message found on tag' };
-    }
-
     const record = tag.ndefMessage[0];
+    console.warn("NDEF Record:", record);
     const payload = Ndef.text.decodePayload(new Uint8Array(record.payload));
-
+    console.warn("Payload:", payload);
     const isValid = payload === NFC_PAYLOAD;
+    console.warn("Is Valid:", isValid);
     return {
       success: true,
       isValid,
-      message: isValid ? 'Valid Broke tag detected' : 'Invalid tag - not a Broke tag',
+      message: isValid
+        ? "Valid Broke tag detected"
+        : "Invalid tag - not a Broke tag",
     };
   } catch (error: any) {
-    if (error.message?.includes('cancelled')) {
-      return { success: false, isValid: false, message: 'NFC scan cancelled' };
-    }
-    return { success: false, isValid: false, message: `NFC read error: ${error.message}` };
+    return {
+      success: false,
+      isValid: false,
+      message: `Error reading tag: ${error.message}`,
+    };
+  }
+};
+
+export async function readNfcTag(): Promise<{
+  success: boolean;
+  isValid: boolean;
+  message?: string;
+}> {
+  try {
+    // register for the NFC tag with NDEF in it
+    console.warn("Requesting NFC technology");
+    await NfcManager.requestTechnology(NfcTech.Ndef);
+    // the resolved tag object will contain `ndefMessage` property
+    console.warn("Waiting for tag");
+    const tag = await NfcManager.getTag();
+    console.warn("Tag found", tag);
+    return handleTag(tag);
+  } catch (ex) {
+    console.warn("Oops!", ex);
+    console.warn("NFC read error", ex);
+    return { success: false, isValid: false, message: "NFC read error" };
   } finally {
+    // stop the nfc scanning
     NfcManager.cancelTechnologyRequest();
   }
 }
 
-export async function writeNfcTag(): Promise<{ success: boolean; message: string }> {
+export async function writeNfcTag(): Promise<{
+  success: boolean;
+  message: string;
+}> {
   try {
     await NfcManager.requestTechnology(NfcTech.Ndef);
 
@@ -51,13 +90,13 @@ export async function writeNfcTag(): Promise<{ success: boolean; message: string
 
     if (bytes) {
       await NfcManager.ndefHandler.writeNdefMessage(bytes);
-      return { success: true, message: 'Tag written successfully!' };
+      return { success: true, message: "Tag written successfully!" };
     }
 
-    return { success: false, message: 'Failed to encode message' };
+    return { success: false, message: "Failed to encode message" };
   } catch (error: any) {
-    if (error.message?.includes('cancelled')) {
-      return { success: false, message: 'NFC write cancelled' };
+    if (error.message?.includes("cancelled")) {
+      return { success: false, message: "NFC write cancelled" };
     }
     return { success: false, message: `NFC write error: ${error.message}` };
   } finally {

@@ -7,6 +7,14 @@ export interface InstalledApp {
   isSystem: boolean;
 }
 
+export interface NativeSchedule {
+  id: string;
+  enabled: boolean;
+  days: number[];
+  startTime: string;
+  blockedPackages: string[];
+}
+
 class AppBlockerManager {
   private isAndroid = Platform.OS === 'android';
 
@@ -86,6 +94,36 @@ class AppBlockerManager {
 
   isSupported(): boolean {
     return this.isAndroid;
+  }
+
+  async setSchedules(schedules: NativeSchedule[]): Promise<boolean> {
+    if (!this.isAndroid) return true;
+    try {
+      return await AppBlockerModule.setSchedules(JSON.stringify(schedules));
+    } catch (error) {
+      console.error('Error setting schedules:', error);
+      return false;
+    }
+  }
+
+  async setScheduleEnabled(enabled: boolean): Promise<boolean> {
+    if (!this.isAndroid) return true;
+    try {
+      return await AppBlockerModule.setScheduleEnabled(enabled);
+    } catch (error) {
+      console.error('Error setting schedule enabled:', error);
+      return false;
+    }
+  }
+
+  async setManualLock(manual: boolean): Promise<boolean> {
+    if (!this.isAndroid) return true;
+    try {
+      return await AppBlockerModule.setManualLock(manual);
+    } catch (error) {
+      console.error('Error setting manual lock:', error);
+      return false;
+    }
   }
 }
 

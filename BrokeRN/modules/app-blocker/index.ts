@@ -14,6 +14,9 @@ interface AppBlockerModuleType extends NativeModule {
   setBlockedPackages(packages: string[]): Promise<boolean>;
   getBlockedPackages(): string[];
   getInstalledApps(): InstalledApp[];
+  setSchedules(schedulesJson: string): Promise<boolean>;
+  setScheduleEnabled(enabled: boolean): Promise<boolean>;
+  setManualLock(manual: boolean): Promise<boolean>;
 }
 
 const AppBlockerModule = requireNativeModule<AppBlockerModuleType>('AppBlocker');
@@ -44,4 +47,16 @@ export function getBlockedPackages(): string[] {
 
 export function getInstalledApps(): InstalledApp[] {
   return AppBlockerModule.getInstalledApps();
+}
+
+export function setSchedules(schedulesJson: string): Promise<boolean> {
+  return AppBlockerModule.setSchedules(schedulesJson);
+}
+
+export function setScheduleEnabled(enabled: boolean): Promise<boolean> {
+  return AppBlockerModule.setScheduleEnabled(enabled);
+}
+
+export function setManualLock(manual: boolean): Promise<boolean> {
+  return AppBlockerModule.setManualLock(manual);
 }

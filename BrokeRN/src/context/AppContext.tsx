@@ -1,8 +1,8 @@
 import React, { createContext, useContext, useState, useEffect, useCallback, useRef, ReactNode } from 'react';
 import { Platform, AppState } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import { Profile, createDefaultProfile, isScheduleActive } from '../types/Profile';
-import { appBlocker } from '../utils/appBlocker';
+import { Profile, createDefaultProfile, hasScheduleStarted, getScheduleStartMinutes } from '../types/Profile';
+import { appBlocker, NativeSchedule } from '../utils/appBlocker';
 
 const STORAGE_KEYS = {
   PROFILES: 'broke_profiles',
@@ -25,6 +25,7 @@ interface AppContextType {
   accessibilityEnabled: boolean;
   scheduleEnabled: boolean;
   activeScheduleProfile: Profile | null;
+  schedulePaused: boolean;
   lockHoldDuration: number;
   unlockHoldDuration: number;
   setCurrentProfile: (profile: Profile) => void;
@@ -38,6 +39,7 @@ interface AppContextType {
   setScheduleEnabled: (enabled: boolean) => Promise<void>;
   setLockHoldDuration: (seconds: number) => Promise<void>;
   setUnlockHoldDuration: (seconds: number) => Promise<void>;
+  resumeSchedule: () => Promise<void>;
 }
 
 const AppContext = createContext<AppContextType | undefined>(undefined);
@@ -53,8 +55,46 @@ export function AppProvider({ children }: { children: ReactNode }) {
   const [lockHoldDuration, setLockHoldDurationState] = useState(DEFAULT_HOLD_DURATION);
   const [unlockHoldDuration, setUnlockHoldDurationState] = useState(DEFAULT_HOLD_DURATION);
   const scheduleCheckRef = useRef<NodeJS.Timeout | null>(null);
+  // True when user manually locked - new schedules won't auto-activate
+  const manualLockRef = useRef<boolean>(false);
+  // Profile ID that was dismissed by manual unlock (won't re-trigger until a new schedule)
+  const dismissedProfileIdRef = useRef<string | null>(null);
+  // True when user manually unlocked during a schedule - can resume
+  const [schedulePaused, setSchedulePaused] = useState(false);
 
   const currentProfile = profiles.find(p => p.id === currentProfileId) || null;
+
+  // Pause schedule when user manually unlocks
+  const pauseSchedule = useCallback(() => {
+    if (activeScheduleProfile) {
+      dismissedProfileIdRef.current = activeScheduleProfile.id;
+      setSchedulePaused(true);
+    }
+  }, [activeScheduleProfile]);
+
+  // Resume the paused schedule
+  const resumeSchedule = useCallback(async () => {
+    if (!schedulePaused || !activeScheduleProfile) {
+      return;
+    }
+
+    setSchedulePaused(false);
+    dismissedProfileIdRef.current = null;
+
+    // Re-activate the schedule profile
+    if (activeScheduleProfile.id !== currentProfileId) {
+      setCurrentProfileId(activeScheduleProfile.id);
+      await AsyncStorage.setItem(STORAGE_KEYS.CURRENT_PROFILE_ID, activeScheduleProfile.id);
+      if (Platform.OS === 'android') {
+        await appBlocker.setBlockedPackages(activeScheduleProfile.blockedApps);
+      }
+    }
+    setIsBlocking(true);
+    await AsyncStorage.setItem(STORAGE_KEYS.IS_BLOCKING, 'true');
+    if (Platform.OS === 'android') {
+      await appBlocker.setBlocking(true);
+    }
+  }, [schedulePaused, activeScheduleProfile, currentProfileId]);
 
   useEffect(() => {
     loadData();
@@ -65,7 +105,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
     };
   }, []);
 
-  // Schedule checking effect
+  // Schedule checking effect - find the schedule with latest start time that has started today
   useEffect(() => {
     if (!scheduleEnabled || profiles.length === 0) {
       setActiveScheduleProfile(null);
@@ -73,48 +113,78 @@ export function AppProvider({ children }: { children: ReactNode }) {
     }
 
     const checkSchedules = async () => {
-      let foundActiveProfile: Profile | null = null;
+      // Skip if user manually locked
+      if (manualLockRef.current) {
+        return;
+      }
+
+      // Find all started schedules and pick the one with the latest start time
+      let bestProfile: Profile | null = null;
+      let bestStartMinutes = -1;
 
       for (const profile of profiles) {
         if (profile.schedules && profile.schedules.length > 0) {
           for (const schedule of profile.schedules) {
-            if (isScheduleActive(schedule)) {
-              foundActiveProfile = profile;
-              break;
+            if (hasScheduleStarted(schedule)) {
+              const startMinutes = getScheduleStartMinutes(schedule);
+              if (startMinutes > bestStartMinutes) {
+                bestStartMinutes = startMinutes;
+                bestProfile = profile;
+              }
             }
           }
         }
-        if (foundActiveProfile) break;
       }
 
       const previousActiveProfile = activeScheduleProfile;
-      setActiveScheduleProfile(foundActiveProfile);
+      const profileChanged = bestProfile?.id !== previousActiveProfile?.id;
 
-      // Auto-enable blocking when schedule becomes active
-      if (foundActiveProfile && !previousActiveProfile) {
-        if (foundActiveProfile.id !== currentProfileId) {
-          setCurrentProfileId(foundActiveProfile.id);
-          await AsyncStorage.setItem(STORAGE_KEYS.CURRENT_PROFILE_ID, foundActiveProfile.id);
-          if (Platform.OS === 'android') {
-            await appBlocker.setBlockedPackages(foundActiveProfile.blockedApps);
+      // If paused, only activate if a DIFFERENT profile's schedule started
+      if (schedulePaused) {
+        if (profileChanged && bestProfile && bestProfile.id !== dismissedProfileIdRef.current) {
+          // New schedule started - end pause and activate
+          setSchedulePaused(false);
+          dismissedProfileIdRef.current = null;
+          setActiveScheduleProfile(bestProfile);
+          if (bestProfile.id !== currentProfileId) {
+            setCurrentProfileId(bestProfile.id);
+            await AsyncStorage.setItem(STORAGE_KEYS.CURRENT_PROFILE_ID, bestProfile.id);
+            if (Platform.OS === 'android') {
+              await appBlocker.setBlockedPackages(bestProfile.blockedApps);
+            }
           }
-        }
-        if (!isBlocking) {
           setIsBlocking(true);
           await AsyncStorage.setItem(STORAGE_KEYS.IS_BLOCKING, 'true');
           if (Platform.OS === 'android') {
             await appBlocker.setBlocking(true);
           }
         }
+        return;
       }
 
-      // Auto-disable blocking when schedule ends
-      if (!foundActiveProfile && previousActiveProfile && isBlocking) {
-        setIsBlocking(false);
-        await AsyncStorage.setItem(STORAGE_KEYS.IS_BLOCKING, 'false');
-        if (Platform.OS === 'android') {
-          await appBlocker.setBlocking(false);
+      if (profileChanged) {
+        setActiveScheduleProfile(bestProfile);
+
+        if (bestProfile) {
+          // Switch to the new active profile
+          if (bestProfile.id !== currentProfileId) {
+            setCurrentProfileId(bestProfile.id);
+            await AsyncStorage.setItem(STORAGE_KEYS.CURRENT_PROFILE_ID, bestProfile.id);
+            if (Platform.OS === 'android') {
+              await appBlocker.setBlockedPackages(bestProfile.blockedApps);
+            }
+          }
+          // Enable blocking if not already
+          if (!isBlocking) {
+            setIsBlocking(true);
+            await AsyncStorage.setItem(STORAGE_KEYS.IS_BLOCKING, 'true');
+            if (Platform.OS === 'android') {
+              await appBlocker.setBlocking(true);
+            }
+          }
         }
+        // Note: We don't auto-disable blocking when no schedules are active
+        // since there are no end times - blocking continues until manual unlock
       }
     };
 
@@ -129,7 +199,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
         clearInterval(scheduleCheckRef.current);
       }
     };
-  }, [scheduleEnabled, profiles, currentProfileId, isBlocking, activeScheduleProfile]);
+  }, [scheduleEnabled, profiles, currentProfileId, isBlocking, activeScheduleProfile, schedulePaused]);
 
   useEffect(() => {
     if (currentProfile && Platform.OS === 'android') {
@@ -182,6 +252,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
       // Sync with native blocker on Android
       if (Platform.OS === 'android') {
         await appBlocker.setBlocking(savedBlocking);
+        await appBlocker.setScheduleEnabled(scheduleState !== 'false');
         const isEnabled = await appBlocker.isAccessibilityEnabled();
         setAccessibilityEnabled(isEnabled);
       }
@@ -201,6 +272,30 @@ export function AppProvider({ children }: { children: ReactNode }) {
     }
   };
 
+  // Convert profiles to native schedule format and sync to native module
+  const syncSchedulesToNative = useCallback(async (profilesToSync: Profile[]) => {
+    if (Platform.OS !== 'android') return;
+
+    const nativeSchedules: NativeSchedule[] = profilesToSync.flatMap(profile =>
+      (profile.schedules || []).map(schedule => ({
+        id: schedule.id,
+        enabled: schedule.enabled,
+        days: schedule.days,
+        startTime: schedule.startTime,
+        blockedPackages: profile.blockedApps,
+      }))
+    );
+
+    await appBlocker.setSchedules(nativeSchedules);
+  }, []);
+
+  // Sync schedules to native whenever profiles change
+  useEffect(() => {
+    if (profiles.length > 0 && !isLoading) {
+      syncSchedulesToNative(profiles);
+    }
+  }, [profiles, isLoading, syncSchedulesToNative]);
+
   const saveProfiles = async (newProfiles: Profile[]) => {
     await AsyncStorage.setItem(STORAGE_KEYS.PROFILES, JSON.stringify(newProfiles));
     setProfiles(newProfiles);
@@ -219,20 +314,42 @@ export function AppProvider({ children }: { children: ReactNode }) {
     setIsBlocking(newState);
     await AsyncStorage.setItem(STORAGE_KEYS.IS_BLOCKING, String(newState));
 
+    if (newState) {
+      // Manual lock - pause schedules until manual unlock
+      manualLockRef.current = true;
+      setSchedulePaused(false); // Clear any paused state when manually locking
+    } else {
+      // Manual unlock - pause schedule (can resume later)
+      manualLockRef.current = false;
+      pauseSchedule();
+    }
+
     // Sync with native blocker on Android
     if (Platform.OS === 'android') {
       await appBlocker.setBlocking(newState);
+      await appBlocker.setManualLock(manualLockRef.current);
     }
-  }, [isBlocking]);
+  }, [isBlocking, pauseSchedule]);
 
   const setBlocking = useCallback(async (blocking: boolean) => {
     setIsBlocking(blocking);
     await AsyncStorage.setItem(STORAGE_KEYS.IS_BLOCKING, String(blocking));
 
+    if (blocking) {
+      // Manual lock - pause schedules until manual unlock
+      manualLockRef.current = true;
+      setSchedulePaused(false);
+    } else {
+      // Manual unlock - pause schedule (can resume later)
+      manualLockRef.current = false;
+      pauseSchedule();
+    }
+
     if (Platform.OS === 'android') {
       await appBlocker.setBlocking(blocking);
+      await appBlocker.setManualLock(manualLockRef.current);
     }
-  }, []);
+  }, [pauseSchedule]);
 
   const addProfile = useCallback(async (profile: Profile) => {
     const newProfiles = [...profiles, profile];
@@ -279,6 +396,9 @@ export function AppProvider({ children }: { children: ReactNode }) {
   const setScheduleEnabled = useCallback(async (enabled: boolean) => {
     setScheduleEnabledState(enabled);
     await AsyncStorage.setItem(STORAGE_KEYS.SCHEDULE_ENABLED, String(enabled));
+    if (Platform.OS === 'android') {
+      await appBlocker.setScheduleEnabled(enabled);
+    }
   }, []);
 
   const setLockHoldDuration = useCallback(async (seconds: number) => {
@@ -301,6 +421,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
         accessibilityEnabled,
         scheduleEnabled,
         activeScheduleProfile,
+        schedulePaused,
         lockHoldDuration,
         unlockHoldDuration,
         setCurrentProfile,
@@ -314,6 +435,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
         setScheduleEnabled,
         setLockHoldDuration,
         setUnlockHoldDuration,
+        resumeSchedule,
       }}
     >
       {children}
