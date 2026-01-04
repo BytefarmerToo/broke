@@ -94,132 +94,132 @@ export function SettingsModal({ visible, onClose }: SettingsModalProps) {
           <SafeAreaView style={styles.container} edges={['bottom']}>
             <View style={styles.dragHandle} />
             <View style={styles.header}>
-          <View style={styles.headerSpacer} />
-          <Text style={styles.title}>Settings</Text>
-          <TouchableOpacity onPress={onClose}>
-            <Text style={styles.doneButton}>Done</Text>
-          </TouchableOpacity>
-        </View>
-
-        <ScrollView style={styles.content} contentContainerStyle={styles.contentContainer}>
-          <View style={styles.section}>
-            <Text style={styles.sectionTitle}>Hold Duration</Text>
-            <Text style={styles.sectionDescription}>
-              How long you need to hold the button to lock or unlock
-            </Text>
-
-            <View style={styles.durationRow}>
-              <View style={styles.durationLabel}>
-                <Ionicons name="lock-closed" size={20} color="#ef4444" />
-                <Text style={styles.durationText}>Lock</Text>
-              </View>
-              <Text style={styles.durationValue}>{formatDuration(localLockDuration)}</Text>
+              <View style={styles.headerSpacer} />
+              <Text style={styles.title}>Settings</Text>
+              <TouchableOpacity onPress={onClose} hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}>
+                <Text style={styles.doneButton}>Done</Text>
+              </TouchableOpacity>
             </View>
-            <Slider
-              style={styles.slider}
-              minimumValue={3}
-              maximumValue={60}
-              step={1}
-              value={localLockDuration}
-              onValueChange={setLocalLockDuration}
-              onSlidingComplete={handleLockDurationChange}
-              minimumTrackTintColor="#ef4444"
-              maximumTrackTintColor="#d1d5db"
-              thumbTintColor="#ef4444"
-            />
 
-            <View style={styles.durationRow}>
-              <View style={styles.durationLabel}>
-                <Ionicons name="lock-open" size={20} color="#22c55e" />
-                <Text style={styles.durationText}>Unlock</Text>
-              </View>
-              <Text style={styles.durationValue}>{formatDuration(localUnlockDuration)}</Text>
-            </View>
-            <Slider
-              style={styles.slider}
-              minimumValue={3}
-              maximumValue={60}
-              step={1}
-              value={localUnlockDuration}
-              onValueChange={setLocalUnlockDuration}
-              onSlidingComplete={handleUnlockDurationChange}
-              minimumTrackTintColor="#22c55e"
-              maximumTrackTintColor="#d1d5db"
-              thumbTintColor="#22c55e"
-            />
-          </View>
-
-          <View style={styles.section}>
-            <Text style={styles.sectionTitle}>Scheduling</Text>
-            <View style={styles.settingRow}>
-              <View style={styles.settingInfo}>
-                <Text style={styles.settingLabel}>Auto-Schedule</Text>
-                <Text style={styles.settingDescription}>
-                  Automatically activate profiles based on schedules
+            <ScrollView style={styles.content} contentContainerStyle={styles.contentContainer}>
+              <View style={styles.section}>
+                <Text style={styles.sectionTitle}>Hold Duration</Text>
+                <Text style={styles.sectionDescription}>
+                  How long you need to hold the button to lock or unlock
                 </Text>
+
+                <View style={styles.durationRow}>
+                  <View style={styles.durationLabel}>
+                    <Ionicons name="lock-closed" size={20} color="#ef4444" />
+                    <Text style={styles.durationText}>Lock</Text>
+                  </View>
+                  <Text style={styles.durationValue}>{formatDuration(localLockDuration)}</Text>
+                </View>
+                <Slider
+                  style={styles.slider}
+                  minimumValue={3}
+                  maximumValue={60}
+                  step={1}
+                  value={localLockDuration}
+                  onValueChange={setLocalLockDuration}
+                  onSlidingComplete={handleLockDurationChange}
+                  minimumTrackTintColor="#ef4444"
+                  maximumTrackTintColor="#d1d5db"
+                  thumbTintColor="#ef4444"
+                />
+
+                <View style={styles.durationRow}>
+                  <View style={styles.durationLabel}>
+                    <Ionicons name="lock-open" size={20} color="#22c55e" />
+                    <Text style={styles.durationText}>Unlock</Text>
+                  </View>
+                  <Text style={styles.durationValue}>{formatDuration(localUnlockDuration)}</Text>
+                </View>
+                <Slider
+                  style={styles.slider}
+                  minimumValue={3}
+                  maximumValue={60}
+                  step={1}
+                  value={localUnlockDuration}
+                  onValueChange={setLocalUnlockDuration}
+                  onSlidingComplete={handleUnlockDurationChange}
+                  minimumTrackTintColor="#22c55e"
+                  maximumTrackTintColor="#d1d5db"
+                  thumbTintColor="#22c55e"
+                />
               </View>
-              <Switch
-                value={scheduleEnabled}
-                onValueChange={setScheduleEnabled}
-                trackColor={{ false: '#d1d5db', true: '#3b82f6' }}
-                thumbColor="#fff"
-              />
-            </View>
-          </View>
 
-          {Platform.OS === 'android' && (
-            <View style={styles.section}>
-              <Text style={styles.sectionTitle}>Permissions</Text>
-              <TouchableOpacity
-                style={styles.settingRow}
-                onPress={openAccessibilitySettings}
-              >
-                <View style={styles.settingInfo}>
-                  <Text style={styles.settingLabel}>Accessibility Service</Text>
-                  <Text style={styles.settingDescription}>
-                    Required to block apps on Android
-                  </Text>
+              <View style={styles.section}>
+                <Text style={styles.sectionTitle}>Scheduling</Text>
+                <View style={styles.settingRow}>
+                  <View style={styles.settingInfo}>
+                    <Text style={styles.settingLabel}>Auto-Schedule</Text>
+                    <Text style={styles.settingDescription}>
+                      Automatically activate profiles based on schedules
+                    </Text>
+                  </View>
+                  <Switch
+                    value={scheduleEnabled}
+                    onValueChange={setScheduleEnabled}
+                    trackColor={{ false: '#d1d5db', true: '#3b82f6' }}
+                    thumbColor="#fff"
+                  />
                 </View>
-                <View style={styles.permissionStatus}>
-                  <Text
-                    style={[
-                      styles.permissionText,
-                      accessibilityEnabled ? styles.permissionEnabled : styles.permissionDisabled,
-                    ]}
+              </View>
+
+              {Platform.OS === 'android' && (
+                <View style={styles.section}>
+                  <Text style={styles.sectionTitle}>Permissions</Text>
+                  <TouchableOpacity
+                    style={styles.settingRow}
+                    onPress={openAccessibilitySettings}
                   >
-                    {accessibilityEnabled ? 'Enabled' : 'Disabled'}
-                  </Text>
-                  <Ionicons name="chevron-forward" size={20} color="#9ca3af" />
+                    <View style={styles.settingInfo}>
+                      <Text style={styles.settingLabel}>Accessibility Service</Text>
+                      <Text style={styles.settingDescription}>
+                        Required to block apps on Android
+                      </Text>
+                    </View>
+                    <View style={styles.permissionStatus}>
+                      <Text
+                        style={[
+                          styles.permissionText,
+                          accessibilityEnabled ? styles.permissionEnabled : styles.permissionDisabled,
+                        ]}
+                      >
+                        {accessibilityEnabled ? 'Enabled' : 'Disabled'}
+                      </Text>
+                      <Ionicons name="chevron-forward" size={20} color="#9ca3af" />
+                    </View>
+                  </TouchableOpacity>
                 </View>
-              </TouchableOpacity>
-            </View>
-          )}
+              )}
 
-          {nfcSupported && (
-            <View style={styles.section}>
-              <Text style={styles.sectionTitle}>NFC</Text>
-              <TouchableOpacity
-                style={styles.nfcButton}
-                onPress={handleWriteTag}
-                disabled={isWritingTag}
-              >
-                {isWritingTag ? (
-                  <ActivityIndicator size="small" color="#0066cc" />
-                ) : (
-                  <Ionicons name="pricetag-outline" size={22} color="#0066cc" />
-                )}
-                <View style={styles.settingInfo}>
-                  <Text style={styles.nfcButtonLabel}>
-                    {isWritingTag ? 'Hold phone near tag...' : 'Create Unlock Tag'}
-                  </Text>
-                  <Text style={styles.settingDescription}>
-                    Write a Broke signature to an NFC tag
-                  </Text>
+              {nfcSupported && (
+                <View style={styles.section}>
+                  <Text style={styles.sectionTitle}>NFC</Text>
+                  <TouchableOpacity
+                    style={styles.nfcButton}
+                    onPress={handleWriteTag}
+                    disabled={isWritingTag}
+                  >
+                    {isWritingTag ? (
+                      <ActivityIndicator size="small" color="#0066cc" />
+                    ) : (
+                      <Ionicons name="pricetag-outline" size={22} color="#0066cc" />
+                    )}
+                    <View style={styles.settingInfo}>
+                      <Text style={styles.nfcButtonLabel}>
+                        {isWritingTag ? 'Hold phone near tag...' : 'Create Unlock Tag'}
+                      </Text>
+                      <Text style={styles.settingDescription}>
+                        Write a Broke signature to an NFC tag
+                      </Text>
+                    </View>
+                  </TouchableOpacity>
                 </View>
-              </TouchableOpacity>
-            </View>
-          )}
-        </ScrollView>
+              )}
+            </ScrollView>
           </SafeAreaView>
         </View>
       </View>
@@ -241,13 +241,13 @@ const styles = StyleSheet.create({
     minHeight: '60%',
   },
   dragHandle: {
-    width: 36,
+    width: 40,
     height: 5,
-    backgroundColor: '#d1d5db',
+    backgroundColor: '#c4c4c4',
     borderRadius: 3,
     alignSelf: 'center',
-    marginTop: 8,
-    marginBottom: 8,
+    marginTop: 10,
+    marginBottom: 6,
   },
   container: {
     flex: 1,

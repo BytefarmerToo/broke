@@ -203,156 +203,156 @@ export function ProfileForm({ visible, profile, onClose }: ProfileFormProps) {
               </TouchableOpacity>
             </View>
 
-            <ScrollView style={styles.content}>
-          <View style={styles.section}>
-            <Text style={styles.sectionTitle}>Profile Name</Text>
-            <TextInput
-              style={styles.input}
-              value={name}
-              onChangeText={setName}
-              placeholder="Enter profile name"
-              placeholderTextColor="#9ca3af"
-            />
-          </View>
+            <ScrollView style={styles.content} contentContainerStyle={styles.contentContainer}>
+              <View style={styles.section}>
+                <Text style={styles.sectionTitle}>Profile Name</Text>
+                <TextInput
+                  style={styles.input}
+                  value={name}
+                  onChangeText={setName}
+                  placeholder="Enter profile name"
+                  placeholderTextColor="#9ca3af"
+                />
+              </View>
 
-          <View style={styles.section}>
-            <Text style={styles.sectionTitle}>Icon</Text>
-            <TouchableOpacity
-              style={styles.iconSelector}
-              onPress={() => setShowIconPicker(true)}
-            >
-              <Ionicons name={icon as any} size={32} color="#374151" />
-              <Text style={styles.iconSelectorText}>Tap to change</Text>
-            </TouchableOpacity>
-          </View>
-
-          <View style={styles.section}>
-            <Text style={styles.sectionTitle}>Block Categories</Text>
-            <View style={styles.optionGrid}>
-              {APP_CATEGORIES.map((category) => (
+              <View style={styles.section}>
+                <Text style={styles.sectionTitle}>Icon</Text>
                 <TouchableOpacity
-                  key={category.id}
-                  style={[
-                    styles.optionCell,
-                    blockedCategories.includes(category.id) && styles.optionCellSelected,
-                  ]}
-                  onPress={() => toggleCategory(category.id)}
+                  style={styles.iconSelector}
+                  onPress={() => setShowIconPicker(true)}
                 >
-                  <Ionicons
-                    name={category.icon as any}
-                    size={20}
-                    color={blockedCategories.includes(category.id) ? '#fff' : '#374151'}
-                  />
-                  <Text
-                    style={[
-                      styles.optionText,
-                      blockedCategories.includes(category.id) && styles.optionTextSelected,
-                    ]}
-                  >
-                    {category.name}
-                  </Text>
+                  <Ionicons name={icon as any} size={32} color="#374151" />
+                  <Text style={styles.iconSelectorText}>Tap to change</Text>
                 </TouchableOpacity>
-              ))}
-            </View>
-          </View>
+              </View>
 
-          <View style={styles.section}>
-            <Text style={styles.sectionTitle}>
-              Block Apps {blockedApps.length > 0 && `(${blockedApps.length})`}
-            </Text>
-            {isAndroid ? (
-              <TouchableOpacity
-                style={styles.selectAppsButton}
-                onPress={() => setShowAppPicker(true)}
-              >
-                <Ionicons name="apps" size={24} color="#3b82f6" />
-                <Text style={styles.selectAppsText}>
-                  {blockedApps.length > 0
-                    ? `${blockedApps.length} apps selected`
-                    : 'Select apps to block'}
-                </Text>
-                <Ionicons name="chevron-forward" size={20} color="#9ca3af" />
-              </TouchableOpacity>
-            ) : (
-              <View style={styles.optionGrid}>
-                {SAMPLE_APPS.map((app) => (
-                  <TouchableOpacity
-                    key={app.id}
-                    style={[
-                      styles.optionCell,
-                      blockedApps.includes(app.id) && styles.optionCellSelected,
-                    ]}
-                    onPress={() => toggleApp(app.id)}
-                  >
-                    <Text
+              <View style={styles.section}>
+                <Text style={styles.sectionTitle}>Block Categories</Text>
+                <View style={styles.optionGrid}>
+                  {APP_CATEGORIES.map((category) => (
+                    <TouchableOpacity
+                      key={category.id}
                       style={[
-                        styles.optionText,
-                        blockedApps.includes(app.id) && styles.optionTextSelected,
+                        styles.optionCell,
+                        blockedCategories.includes(category.id) && styles.optionCellSelected,
                       ]}
+                      onPress={() => toggleCategory(category.id)}
                     >
-                      {app.name}
+                      <Ionicons
+                        name={category.icon as any}
+                        size={20}
+                        color={blockedCategories.includes(category.id) ? '#fff' : '#374151'}
+                      />
+                      <Text
+                        style={[
+                          styles.optionText,
+                          blockedCategories.includes(category.id) && styles.optionTextSelected,
+                        ]}
+                      >
+                        {category.name}
+                      </Text>
+                    </TouchableOpacity>
+                  ))}
+                </View>
+              </View>
+
+              <View style={styles.section}>
+                <Text style={styles.sectionTitle}>
+                  Block Apps {blockedApps.length > 0 && `(${blockedApps.length})`}
+                </Text>
+                {isAndroid ? (
+                  <TouchableOpacity
+                    style={styles.selectAppsButton}
+                    onPress={() => setShowAppPicker(true)}
+                  >
+                    <Ionicons name="apps" size={24} color="#3b82f6" />
+                    <Text style={styles.selectAppsText}>
+                      {blockedApps.length > 0
+                        ? `${blockedApps.length} apps selected`
+                        : 'Select apps to block'}
                     </Text>
+                    <Ionicons name="chevron-forward" size={20} color="#9ca3af" />
+                  </TouchableOpacity>
+                ) : (
+                  <View style={styles.optionGrid}>
+                    {SAMPLE_APPS.map((app) => (
+                      <TouchableOpacity
+                        key={app.id}
+                        style={[
+                          styles.optionCell,
+                          blockedApps.includes(app.id) && styles.optionCellSelected,
+                        ]}
+                        onPress={() => toggleApp(app.id)}
+                      >
+                        <Text
+                          style={[
+                            styles.optionText,
+                            blockedApps.includes(app.id) && styles.optionTextSelected,
+                          ]}
+                        >
+                          {app.name}
+                        </Text>
+                      </TouchableOpacity>
+                    ))}
+                  </View>
+                )}
+              </View>
+
+              <View style={styles.section}>
+                <Text style={styles.sectionTitle}>
+                  Schedules {schedules.length > 0 && `(${schedules.length})`}
+                </Text>
+                {schedules.map((schedule) => (
+                  <TouchableOpacity
+                    key={schedule.id}
+                    style={[
+                      styles.scheduleItem,
+                      !schedule.enabled && styles.scheduleItemDisabled,
+                    ]}
+                    onPress={() => {
+                      setEditingSchedule(schedule);
+                      setShowScheduleForm(true);
+                    }}
+                  >
+                    <View style={styles.scheduleInfo}>
+                      <Text style={[
+                        styles.scheduleTime,
+                        !schedule.enabled && styles.scheduleTextDisabled,
+                      ]}>
+                        {formatTime(schedule.startTime)}
+                      </Text>
+                      <Text style={[
+                        styles.scheduleDays,
+                        !schedule.enabled && styles.scheduleTextDisabled,
+                      ]}>
+                        {formatScheduleDays(schedule.days)}
+                      </Text>
+                    </View>
+                    <Ionicons
+                      name={schedule.enabled ? 'checkmark-circle' : 'ellipse-outline'}
+                      size={24}
+                      color={schedule.enabled ? '#22c55e' : '#9ca3af'}
+                    />
                   </TouchableOpacity>
                 ))}
+                <TouchableOpacity
+                  style={styles.addScheduleButton}
+                  onPress={() => {
+                    setEditingSchedule(null);
+                    setShowScheduleForm(true);
+                  }}
+                >
+                  <Ionicons name="add-circle-outline" size={24} color="#3b82f6" />
+                  <Text style={styles.addScheduleText}>Add Schedule</Text>
+                </TouchableOpacity>
               </View>
-            )}
-          </View>
 
-          <View style={styles.section}>
-            <Text style={styles.sectionTitle}>
-              Auto-Schedule {schedules.length > 0 && `(${schedules.length})`}
-            </Text>
-            {schedules.map((schedule) => (
-              <TouchableOpacity
-                key={schedule.id}
-                style={[
-                  styles.scheduleItem,
-                  !schedule.enabled && styles.scheduleItemDisabled,
-                ]}
-                onPress={() => {
-                  setEditingSchedule(schedule);
-                  setShowScheduleForm(true);
-                }}
-              >
-                <View style={styles.scheduleInfo}>
-                  <Text style={[
-                    styles.scheduleTime,
-                    !schedule.enabled && styles.scheduleTextDisabled,
-                  ]}>
-                    {formatTime(schedule.startTime)}
-                  </Text>
-                  <Text style={[
-                    styles.scheduleDays,
-                    !schedule.enabled && styles.scheduleTextDisabled,
-                  ]}>
-                    {formatScheduleDays(schedule.days)}
-                  </Text>
-                </View>
-                <Ionicons
-                  name={schedule.enabled ? 'checkmark-circle' : 'ellipse-outline'}
-                  size={24}
-                  color={schedule.enabled ? '#22c55e' : '#9ca3af'}
-                />
-              </TouchableOpacity>
-            ))}
-            <TouchableOpacity
-              style={styles.addScheduleButton}
-              onPress={() => {
-                setEditingSchedule(null);
-                setShowScheduleForm(true);
-              }}
-            >
-              <Ionicons name="add-circle-outline" size={24} color="#3b82f6" />
-              <Text style={styles.addScheduleText}>Add Schedule</Text>
-            </TouchableOpacity>
-          </View>
-
-          {isEditing && (
-            <TouchableOpacity style={styles.deleteButton} onPress={handleDelete}>
-              <Text style={styles.deleteButtonText}>Delete Profile</Text>
-            </TouchableOpacity>
-          )}
-        </ScrollView>
+              {isEditing && (
+                <TouchableOpacity style={styles.deleteButton} onPress={handleDelete}>
+                  <Text style={styles.deleteButtonText}>Delete Profile</Text>
+                </TouchableOpacity>
+              )}
+            </ScrollView>
 
         {/* Icon Picker Modal */}
         <Modal visible={showIconPicker} animationType="fade" transparent>

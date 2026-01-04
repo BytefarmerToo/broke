@@ -16,7 +16,7 @@ interface ProfilePickerProps {
   onEditProfile: (profile: Profile) => void;
 }
 
-const CELL_SIZE = 90;
+const CELL_SIZE = 100;
 const CELL_MARGIN = 8;
 
 export function ProfilePicker({ onNewProfile, onEditProfile }: ProfilePickerProps) {
@@ -59,13 +59,13 @@ export function ProfilePicker({ onNewProfile, onEditProfile }: ProfilePickerProp
                 currentProfile?.id === profile.id && styles.cellCountSelected,
               ]}
             >
-              A: {profile.blockedApps.length} C: {profile.blockedCategories.length}
+              {profile.blockedApps.length} apps
             </Text>
           </TouchableOpacity>
         ))}
         <TouchableOpacity style={styles.newCell} onPress={onNewProfile}>
-          <Ionicons name="add" size={28} color="#9ca3af" />
-          <Text style={styles.newCellText}>New...</Text>
+          <Ionicons name="add" size={28} color="#6b7280" />
+          <Text style={styles.newCellText}>New</Text>
         </TouchableOpacity>
       </ScrollView>
     </View>
@@ -131,13 +131,12 @@ const styles = StyleSheet.create({
     margin: CELL_MARGIN,
     alignItems: 'center',
     justifyContent: 'center',
-    borderWidth: 2,
-    borderStyle: 'dashed',
-    borderColor: '#d1d5db',
+    backgroundColor: '#e5e7eb',
   },
   newCellText: {
     fontSize: 12,
-    color: '#9ca3af',
+    fontWeight: '500',
+    color: '#6b7280',
     marginTop: 4,
   },
 });
