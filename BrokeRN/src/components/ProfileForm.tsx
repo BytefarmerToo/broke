@@ -33,7 +33,7 @@ export function ProfileForm({ visible, profile, onClose }: ProfileFormProps) {
   const [name, setName] = useState('');
   const [icon, setIcon] = useState('lock-closed');
   const [blockedApps, setBlockedApps] = useState<string[]>([]);
-  const [blockedCategories, setBlockedCategories] = useState<string[]>([]);
+  const [blockedCategories, setBlockedCategories] = useState<number[]>([]);
   const [showIconPicker, setShowIconPicker] = useState(false);
   const [showAppPicker, setShowAppPicker] = useState(false);
   const [installedApps, setInstalledApps] = useState<InstalledApp[]>([]);
@@ -145,7 +145,7 @@ export function ProfileForm({ visible, profile, onClose }: ProfileFormProps) {
     );
   };
 
-  const toggleCategory = (categoryId: string) => {
+  const toggleCategory = (categoryId: number) => {
     setBlockedCategories((prev) =>
       prev.includes(categoryId)
         ? prev.filter((id) => id !== categoryId)
@@ -502,7 +502,10 @@ const styles = StyleSheet.create({
   },
   content: {
     flex: 1,
+  },
+  contentContainer: {
     padding: 16,
+    paddingBottom: 32,
   },
   section: {
     marginBottom: 24,

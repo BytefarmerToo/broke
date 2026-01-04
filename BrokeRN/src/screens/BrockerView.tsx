@@ -55,10 +55,12 @@ export function BrockerView() {
   const [buttonScale] = useState(new Animated.Value(1));
   const [holdProgress, setHoldProgress] = useState(0);
   const [isHolding, setIsHolding] = useState(false);
+  const [scanPulse] = useState(new Animated.Value(1));
   const holdIntervalRef = useRef<NodeJS.Timeout | null>(null);
   const holdStartTimeRef = useRef<number | null>(null);
   const handleToggleCompleteRef = useRef<() => void>(() => {});
   const nfcCancelledRef = useRef(false);
+  const scanAnimationRef = useRef<Animated.CompositeAnimation | null>(null);
 
   useEffect(() => {
     initNfc().then(setNfcSupported);
@@ -74,6 +76,33 @@ export function BrockerView() {
     };
   }, []);
 
+  // Start/stop pulsing animation based on scanning state
+  const startScanAnimation = useCallback(() => {
+    scanAnimationRef.current = Animated.loop(
+      Animated.sequence([
+        Animated.timing(scanPulse, {
+          toValue: 1.15,
+          duration: 1000,
+          useNativeDriver: true,
+        }),
+        Animated.timing(scanPulse, {
+          toValue: 1,
+          duration: 1000,
+          useNativeDriver: true,
+        }),
+      ])
+    );
+    scanAnimationRef.current.start();
+  }, [scanPulse]);
+
+  const stopScanAnimation = useCallback(() => {
+    if (scanAnimationRef.current) {
+      scanAnimationRef.current.stop();
+      scanAnimationRef.current = null;
+    }
+    scanPulse.setValue(1);
+  }, [scanPulse]);
+
   const currentHoldDuration = isBlocking
     ? unlockHoldDuration
     : lockHoldDuration;
@@ -86,7 +115,11 @@ export function BrockerView() {
     holdStartTimeRef.current = null;
     setIsHolding(false);
     setHoldProgress(0);
-  }, []);
+    // Resume scan animation if still blocking
+    if (isBlocking && isScanning) {
+      startScanAnimation();
+    }
+  }, [isBlocking, isScanning, startScanAnimation]);
 
   const handleToggleComplete = useCallback(async () => {
     Haptics.notificationAsync(
@@ -99,26 +132,23 @@ export function BrockerView() {
     await toggleBlocking();
   }, [isBlocking, toggleBlocking]);
 
-  const handleNfcUnlock = useCallback(async () => {
-    if (!nfcSupported || !isBlocking) return;
-
-    // If already scanning, cancel it
-    if (isScanning) {
-      nfcCancelledRef.current = true;
-      cleanupNfc();
-      setIsScanning(false);
-      return;
-    }
+  // Continuous NFC scanning while locked
+  const startNfcScanning = useCallback(async () => {
+    if (!nfcSupported || !isBlocking || isScanning) return;
 
     nfcCancelledRef.current = false;
     setIsScanning(true);
+    startScanAnimation();
+
     try {
       const result = await readNfcTag();
 
-      // Don't show error if user intentionally cancelled
+      // Don't show error if intentionally cancelled
       if (!result.success) {
-        if (!nfcCancelledRef.current) {
-          Alert.alert("NFC Error", result.message);
+        if (!nfcCancelledRef.current && !result.message?.includes("cancelled")) {
+          // Silently restart scanning on errors (no alert)
+          setIsScanning(false);
+          stopScanAnimation();
         }
         return;
       }
@@ -132,11 +162,39 @@ export function BrockerView() {
           "Invalid Tag",
           "This is not a Broke tag. Create one in Settings."
         );
+        // Restart scanning after invalid tag
+        setIsScanning(false);
+        stopScanAnimation();
       }
-    } finally {
+    } catch {
       setIsScanning(false);
+      stopScanAnimation();
     }
-  }, [nfcSupported, isBlocking, isScanning, toggleBlocking]);
+  }, [nfcSupported, isBlocking, isScanning, toggleBlocking, startScanAnimation, stopScanAnimation]);
+
+  // Auto-start NFC scanning when locked
+  useEffect(() => {
+    if (isBlocking && nfcSupported && !isScanning) {
+      startNfcScanning();
+    }
+
+    if (!isBlocking && isScanning) {
+      nfcCancelledRef.current = true;
+      cleanupNfc();
+      setIsScanning(false);
+      stopScanAnimation();
+    }
+  }, [isBlocking, nfcSupported]);
+
+  // Restart scanning after it completes (for continuous scanning)
+  useEffect(() => {
+    if (isBlocking && nfcSupported && !isScanning && !nfcCancelledRef.current) {
+      const timer = setTimeout(() => {
+        startNfcScanning();
+      }, 500); // Small delay before restarting
+      return () => clearTimeout(timer);
+    }
+  }, [isScanning, isBlocking, nfcSupported]);
 
   // Keep ref updated with latest handleToggleComplete
   useEffect(() => {
@@ -164,6 +222,9 @@ export function BrockerView() {
       return;
     }
 
+    // Pause NFC scanning animation while holding
+    stopScanAnimation();
+
     setIsHolding(true);
     holdStartTimeRef.current = Date.now();
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
@@ -187,6 +248,7 @@ export function BrockerView() {
     currentHoldDuration,
     openAccessibilitySettings,
     stopHold,
+    stopScanAnimation,
   ]);
 
   // Re-check accessibility when app comes to foreground
@@ -286,30 +348,41 @@ export function BrockerView() {
           style={styles.toggleButton}
           onPressIn={startHold}
           onPressOut={stopHold}
-          disabled={isScanning}
         >
-          <CircularProgress
-            size={180}
-            strokeWidth={8}
-            progress={holdProgress}
-            color="#fff"
-            backgroundColor="rgba(255, 255, 255, 0.3)"
+          <Animated.View
+            style={
+              isBlocking && isScanning && !isHolding
+                ? { transform: [{ scale: scanPulse }] }
+                : undefined
+            }
           >
-            <Ionicons
-              name={isBlocking ? "lock-closed" : "lock-open"}
-              size={60}
+            <CircularProgress
+              size={180}
+              strokeWidth={8}
+              progress={holdProgress}
               color="#fff"
-            />
-          </CircularProgress>
+              backgroundColor="rgba(255, 255, 255, 0.3)"
+            >
+              <Ionicons
+                name={isBlocking ? "lock-closed" : "lock-open"}
+                size={60}
+                color="#fff"
+              />
+            </CircularProgress>
+          </Animated.View>
           <Text style={styles.toggleText}>
-            {isScanning
-              ? "Scanning..."
-              : isHolding
+            {isHolding
               ? `${Math.ceil(currentHoldDuration * (1 - holdProgress))}s`
               : isBlocking
               ? "Hold to unlock"
               : "Hold to lock"}
           </Text>
+          {isBlocking && nfcSupported && !isHolding && (
+            <View style={styles.nfcHint}>
+              <Ionicons name="scan-outline" size={14} color="rgba(255, 255, 255, 0.7)" />
+              <Text style={styles.nfcHintText}>or scan NFC tag</Text>
+            </View>
+          )}
           {currentProfile && (
             <Text style={styles.profileText}>{currentProfile.name}</Text>
           )}
@@ -330,30 +403,6 @@ export function BrockerView() {
           )}
         </Pressable>
       </Animated.View>
-
-      {isBlocking && nfcSupported && (
-        <TouchableOpacity
-          style={[
-            styles.nfcUnlockButton,
-            isScanning && styles.nfcUnlockButtonScanning,
-          ]}
-          onPress={handleNfcUnlock}
-        >
-          <Ionicons
-            name={isScanning ? "close-circle" : "scan"}
-            size={20}
-            color={isScanning ? "#6b7280" : "#ef4444"}
-          />
-          <Text
-            style={[
-              styles.nfcUnlockText,
-              isScanning && styles.nfcUnlockTextScanning,
-            ]}
-          >
-            {isScanning ? "Tap to Cancel" : "Scan Tag to Unlock"}
-          </Text>
-        </TouchableOpacity>
-      )}
 
       {schedulePaused && !isBlocking && (
         <TouchableOpacity
@@ -447,6 +496,16 @@ const styles = StyleSheet.create({
     color: "rgba(255, 255, 255, 0.6)",
     marginTop: 8,
   },
+  nfcHint: {
+    flexDirection: "row",
+    alignItems: "center",
+    marginTop: 8,
+    gap: 4,
+  },
+  nfcHintText: {
+    fontSize: 14,
+    color: "rgba(255, 255, 255, 0.7)",
+  },
   scheduleIndicator: {
     flexDirection: "row",
     alignItems: "center",
@@ -481,27 +540,5 @@ const styles = StyleSheet.create({
     fontSize: 16,
     fontWeight: "600",
     color: "#fff",
-  },
-  nfcUnlockButton: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "center",
-    backgroundColor: "#fee2e2",
-    marginHorizontal: 20,
-    marginTop: 16,
-    paddingVertical: 14,
-    borderRadius: 12,
-    gap: 8,
-  },
-  nfcUnlockButtonScanning: {
-    backgroundColor: "#f3f4f6",
-  },
-  nfcUnlockText: {
-    fontSize: 16,
-    fontWeight: "600",
-    color: "#ef4444",
-  },
-  nfcUnlockTextScanning: {
-    color: "#6b7280",
   },
 });
