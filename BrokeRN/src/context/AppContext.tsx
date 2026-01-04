@@ -253,6 +253,30 @@ export function AppProvider({ children }: { children: ReactNode }) {
         setIsBlocking(nativeBlocking);
         await AsyncStorage.setItem(STORAGE_KEYS.IS_BLOCKING, String(nativeBlocking));
 
+        // If native is blocking, find the active schedule profile
+        if (nativeBlocking && scheduleState !== 'false') {
+          let bestProfile: Profile | null = null;
+          let bestStartMinutes = -1;
+
+          for (const profile of loadedProfiles) {
+            if (profile.schedules && profile.schedules.length > 0) {
+              for (const schedule of profile.schedules) {
+                if (hasScheduleStarted(schedule)) {
+                  const startMinutes = getScheduleStartMinutes(schedule);
+                  if (startMinutes > bestStartMinutes) {
+                    bestStartMinutes = startMinutes;
+                    bestProfile = profile;
+                  }
+                }
+              }
+            }
+          }
+
+          if (bestProfile) {
+            setActiveScheduleProfile(bestProfile);
+          }
+        }
+
         await appBlocker.setScheduleEnabled(scheduleState !== 'false');
         const isEnabled = appBlocker.isAccessibilityEnabled();
         setAccessibilityEnabled(isEnabled);
