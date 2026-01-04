@@ -29,21 +29,42 @@ interface TimePickerProps {
 }
 
 function TimePicker({ visible, value, title, onSelect, onClose }: TimePickerProps) {
-  const [selectedHour, setSelectedHour] = useState(() => parseInt(value.split(':')[0], 10));
-  const [selectedMinute, setSelectedMinute] = useState(() => parseInt(value.split(':')[1], 10));
+  // Convert 24-hour to 12-hour format for display
+  const parse24Hour = (time: string) => {
+    const hour24 = parseInt(time.split(':')[0], 10);
+    const minute = parseInt(time.split(':')[1], 10);
+    const isAM = hour24 < 12;
+    let hour12 = hour24 % 12;
+    if (hour12 === 0) hour12 = 12;
+    return { hour12, minute, isAM };
+  };
+
+  const initial = parse24Hour(value);
+  const [selectedHour, setSelectedHour] = useState(initial.hour12);
+  const [selectedMinute, setSelectedMinute] = useState(initial.minute);
+  const [isAM, setIsAM] = useState(initial.isAM);
 
   React.useEffect(() => {
     if (visible) {
-      setSelectedHour(parseInt(value.split(':')[0], 10));
-      setSelectedMinute(parseInt(value.split(':')[1], 10));
+      const parsed = parse24Hour(value);
+      setSelectedHour(parsed.hour12);
+      setSelectedMinute(parsed.minute);
+      setIsAM(parsed.isAM);
     }
   }, [visible, value]);
 
-  const hours = Array.from({ length: 24 }, (_, i) => i);
+  const hours = [12, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11];
   const minutes = [0, 15, 30, 45];
 
   const handleSave = () => {
-    const time = `${selectedHour.toString().padStart(2, '0')}:${selectedMinute.toString().padStart(2, '0')}`;
+    // Convert 12-hour back to 24-hour
+    let hour24 = selectedHour;
+    if (isAM) {
+      if (selectedHour === 12) hour24 = 0;
+    } else {
+      if (selectedHour !== 12) hour24 = selectedHour + 12;
+    }
+    const time = `${hour24.toString().padStart(2, '0')}:${selectedMinute.toString().padStart(2, '0')}`;
     onSelect(time);
     onClose();
   };
@@ -56,31 +77,28 @@ function TimePicker({ visible, value, title, onSelect, onClose }: TimePickerProp
           <View style={styles.timePickerRow}>
             <View style={styles.timeColumn}>
               <Text style={styles.timeColumnLabel}>Hour</Text>
-              <ScrollView style={styles.timeScroll} showsVerticalScrollIndicator={false}>
-                <View style={styles.timeOptions}>
-                  {hours.map((hour) => (
-                    <TouchableOpacity
-                      key={hour}
+              <View style={styles.timeOptionsGrid}>
+                {hours.map((hour) => (
+                  <TouchableOpacity
+                    key={hour}
+                    style={[
+                      styles.timeOption,
+                      selectedHour === hour && styles.timeOptionSelected,
+                    ]}
+                    onPress={() => setSelectedHour(hour)}
+                  >
+                    <Text
                       style={[
-                        styles.timeOption,
-                        selectedHour === hour && styles.timeOptionSelected,
+                        styles.timeOptionText,
+                        selectedHour === hour && styles.timeOptionTextSelected,
                       ]}
-                      onPress={() => setSelectedHour(hour)}
                     >
-                      <Text
-                        style={[
-                          styles.timeOptionText,
-                          selectedHour === hour && styles.timeOptionTextSelected,
-                        ]}
-                      >
-                        {hour.toString().padStart(2, '0')}
-                      </Text>
-                    </TouchableOpacity>
-                  ))}
-                </View>
-              </ScrollView>
+                      {hour}
+                    </Text>
+                  </TouchableOpacity>
+                ))}
+              </View>
             </View>
-            <Text style={styles.timeSeparator}>:</Text>
             <View style={styles.timeColumn}>
               <Text style={styles.timeColumnLabel}>Min</Text>
               <View style={styles.timeOptionsSmall}>
@@ -103,6 +121,43 @@ function TimePicker({ visible, value, title, onSelect, onClose }: TimePickerProp
                     </Text>
                   </TouchableOpacity>
                 ))}
+              </View>
+            </View>
+            <View style={styles.timeColumn}>
+              <Text style={styles.timeColumnLabel}> </Text>
+              <View style={styles.amPmColumn}>
+                <TouchableOpacity
+                  style={[
+                    styles.amPmOption,
+                    isAM && styles.amPmOptionSelected,
+                  ]}
+                  onPress={() => setIsAM(true)}
+                >
+                  <Text
+                    style={[
+                      styles.amPmText,
+                      isAM && styles.amPmTextSelected,
+                    ]}
+                  >
+                    AM
+                  </Text>
+                </TouchableOpacity>
+                <TouchableOpacity
+                  style={[
+                    styles.amPmOption,
+                    !isAM && styles.amPmOptionSelected,
+                  ]}
+                  onPress={() => setIsAM(false)}
+                >
+                  <Text
+                    style={[
+                      styles.amPmText,
+                      !isAM && styles.amPmTextSelected,
+                    ]}
+                  >
+                    PM
+                  </Text>
+                </TouchableOpacity>
               </View>
             </View>
           </View>
@@ -453,18 +508,18 @@ const styles = StyleSheet.create({
     color: '#6b7280',
     marginBottom: 8,
   },
-  timeScroll: {
-    maxHeight: 200,
-  },
-  timeOptions: {
+  timeOptionsGrid: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    width: 132,
     gap: 4,
   },
   timeOptionsSmall: {
     gap: 4,
   },
   timeOption: {
-    width: 56,
-    height: 44,
+    width: 40,
+    height: 40,
     borderRadius: 8,
     backgroundColor: '#f3f4f6',
     alignItems: 'center',
@@ -481,11 +536,27 @@ const styles = StyleSheet.create({
     color: '#fff',
     fontWeight: '600',
   },
-  timeSeparator: {
-    fontSize: 24,
+  amPmColumn: {
+    gap: 4,
+  },
+  amPmOption: {
+    width: 48,
+    height: 40,
+    borderRadius: 8,
+    backgroundColor: '#f3f4f6',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  amPmOptionSelected: {
+    backgroundColor: '#3b82f6',
+  },
+  amPmText: {
+    fontSize: 14,
     fontWeight: '600',
     color: '#374151',
-    marginTop: 28,
+  },
+  amPmTextSelected: {
+    color: '#fff',
   },
   pickerButtons: {
     flexDirection: 'row',
