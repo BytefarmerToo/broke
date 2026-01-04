@@ -56,6 +56,7 @@ export function BrockerView() {
   const [holdProgress, setHoldProgress] = useState(0);
   const [isHolding, setIsHolding] = useState(false);
   const [scanPulse] = useState(new Animated.Value(1));
+  const [appIsActive, setAppIsActive] = useState(true);
   const holdIntervalRef = useRef<NodeJS.Timeout | null>(null);
   const holdStartTimeRef = useRef<number | null>(null);
   const handleToggleCompleteRef = useRef<() => void>(() => {});
@@ -103,6 +104,24 @@ export function BrockerView() {
     scanPulse.setValue(1);
   }, [scanPulse]);
 
+  // Track app foreground/background state
+  useEffect(() => {
+    const subscription = AppState.addEventListener("change", (nextAppState) => {
+      const isActive = nextAppState === "active";
+      setAppIsActive(isActive);
+
+      // Cancel NFC scanning when going to background
+      if (!isActive && isScanning) {
+        nfcCancelledRef.current = true;
+        cleanupNfc();
+        setIsScanning(false);
+        stopScanAnimation();
+      }
+    });
+
+    return () => subscription.remove();
+  }, [isScanning, stopScanAnimation]);
+
   const currentHoldDuration = isBlocking
     ? unlockHoldDuration
     : lockHoldDuration;
@@ -132,9 +151,9 @@ export function BrockerView() {
     await toggleBlocking();
   }, [isBlocking, toggleBlocking]);
 
-  // Continuous NFC scanning while locked
+  // Continuous NFC scanning while locked and app is active
   const startNfcScanning = useCallback(async () => {
-    if (!nfcSupported || !isBlocking || isScanning) return;
+    if (!nfcSupported || !isBlocking || isScanning || !appIsActive) return;
 
     nfcCancelledRef.current = false;
     setIsScanning(true);
@@ -170,11 +189,11 @@ export function BrockerView() {
       setIsScanning(false);
       stopScanAnimation();
     }
-  }, [nfcSupported, isBlocking, isScanning, toggleBlocking, startScanAnimation, stopScanAnimation]);
+  }, [nfcSupported, isBlocking, isScanning, appIsActive, toggleBlocking, startScanAnimation, stopScanAnimation]);
 
-  // Auto-start NFC scanning when locked
+  // Auto-start NFC scanning when locked and app is active
   useEffect(() => {
-    if (isBlocking && nfcSupported && !isScanning) {
+    if (isBlocking && nfcSupported && !isScanning && appIsActive) {
       startNfcScanning();
     }
 
@@ -184,17 +203,17 @@ export function BrockerView() {
       setIsScanning(false);
       stopScanAnimation();
     }
-  }, [isBlocking, nfcSupported]);
+  }, [isBlocking, nfcSupported, appIsActive]);
 
   // Restart scanning after it completes (for continuous scanning)
   useEffect(() => {
-    if (isBlocking && nfcSupported && !isScanning && !nfcCancelledRef.current) {
+    if (isBlocking && nfcSupported && !isScanning && !nfcCancelledRef.current && appIsActive) {
       const timer = setTimeout(() => {
         startNfcScanning();
       }, 500); // Small delay before restarting
       return () => clearTimeout(timer);
     }
-  }, [isScanning, isBlocking, nfcSupported]);
+  }, [isScanning, isBlocking, nfcSupported, appIsActive]);
 
   // Keep ref updated with latest handleToggleComplete
   useEffect(() => {
