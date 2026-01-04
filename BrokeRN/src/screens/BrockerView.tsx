@@ -243,12 +243,14 @@ export function BrockerView() {
     <SafeAreaView style={styles.container} edges={["top"]}>
       <View style={[styles.header, { backgroundColor }]}>
         <Text style={styles.headerTitle}>Broke</Text>
-        <TouchableOpacity
-          onPress={() => setShowSettings(true)}
-          style={styles.headerButton}
-        >
-          <Ionicons name="settings-outline" size={24} color="#fff" />
-        </TouchableOpacity>
+        {!isBlocking && (
+          <TouchableOpacity
+            onPress={() => setShowSettings(true)}
+            style={styles.headerButton}
+          >
+            <Ionicons name="settings-outline" size={24} color="#fff" />
+          </TouchableOpacity>
+        )}
       </View>
 
       {showAccessibilityWarning && (
