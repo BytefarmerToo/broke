@@ -481,7 +481,7 @@ const styles = StyleSheet.create({
     fontSize: 20,
     fontWeight: "600",
     color: "#fff",
-    marginTop: 16,
+    marginTop: 24,
   },
   profileText: {
     fontSize: 14,
