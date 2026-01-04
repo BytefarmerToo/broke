@@ -6,6 +6,7 @@ import {
   TouchableOpacity,
   Modal,
   Switch,
+  ScrollView,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
@@ -22,13 +23,21 @@ interface ScheduleFormProps {
 interface TimePickerProps {
   visible: boolean;
   value: string;
+  title: string;
   onSelect: (time: string) => void;
   onClose: () => void;
 }
 
-function TimePicker({ visible, value, onSelect, onClose }: TimePickerProps) {
+function TimePicker({ visible, value, title, onSelect, onClose }: TimePickerProps) {
   const [selectedHour, setSelectedHour] = useState(() => parseInt(value.split(':')[0], 10));
   const [selectedMinute, setSelectedMinute] = useState(() => parseInt(value.split(':')[1], 10));
+
+  React.useEffect(() => {
+    if (visible) {
+      setSelectedHour(parseInt(value.split(':')[0], 10));
+      setSelectedMinute(parseInt(value.split(':')[1], 10));
+    }
+  }, [visible, value]);
 
   const hours = Array.from({ length: 24 }, (_, i) => i);
   const minutes = [0, 15, 30, 45];
@@ -43,36 +52,38 @@ function TimePicker({ visible, value, onSelect, onClose }: TimePickerProps) {
     <Modal visible={visible} animationType="fade" transparent>
       <View style={styles.pickerOverlay}>
         <View style={styles.pickerContainer}>
-          <Text style={styles.pickerTitle}>Select Time</Text>
+          <Text style={styles.pickerTitle}>{title}</Text>
           <View style={styles.timePickerRow}>
             <View style={styles.timeColumn}>
               <Text style={styles.timeColumnLabel}>Hour</Text>
-              <View style={styles.timeOptions}>
-                {hours.map((hour) => (
-                  <TouchableOpacity
-                    key={hour}
-                    style={[
-                      styles.timeOption,
-                      selectedHour === hour && styles.timeOptionSelected,
-                    ]}
-                    onPress={() => setSelectedHour(hour)}
-                  >
-                    <Text
+              <ScrollView style={styles.timeScroll} showsVerticalScrollIndicator={false}>
+                <View style={styles.timeOptions}>
+                  {hours.map((hour) => (
+                    <TouchableOpacity
+                      key={hour}
                       style={[
-                        styles.timeOptionText,
-                        selectedHour === hour && styles.timeOptionTextSelected,
+                        styles.timeOption,
+                        selectedHour === hour && styles.timeOptionSelected,
                       ]}
+                      onPress={() => setSelectedHour(hour)}
                     >
-                      {hour.toString().padStart(2, '0')}
-                    </Text>
-                  </TouchableOpacity>
-                ))}
-              </View>
+                      <Text
+                        style={[
+                          styles.timeOptionText,
+                          selectedHour === hour && styles.timeOptionTextSelected,
+                        ]}
+                      >
+                        {hour.toString().padStart(2, '0')}
+                      </Text>
+                    </TouchableOpacity>
+                  ))}
+                </View>
+              </ScrollView>
             </View>
             <Text style={styles.timeSeparator}>:</Text>
             <View style={styles.timeColumn}>
               <Text style={styles.timeColumnLabel}>Min</Text>
-              <View style={styles.timeOptions}>
+              <View style={styles.timeOptionsSmall}>
                 {minutes.map((minute) => (
                   <TouchableOpacity
                     key={minute}
@@ -115,13 +126,16 @@ export function ScheduleForm({ visible, schedule, onSave, onDelete, onClose }: S
   const [enabled, setEnabled] = useState(schedule?.enabled ?? true);
   const [days, setDays] = useState<number[]>(schedule?.days ?? [1, 2, 3, 4, 5]);
   const [startTime, setStartTime] = useState(schedule?.startTime ?? '09:00');
+  const [endTime, setEndTime] = useState(schedule?.endTime ?? '17:00');
   const [showStartPicker, setShowStartPicker] = useState(false);
+  const [showEndPicker, setShowEndPicker] = useState(false);
 
   React.useEffect(() => {
     if (visible) {
       setEnabled(schedule?.enabled ?? true);
       setDays(schedule?.days ?? [1, 2, 3, 4, 5]);
       setStartTime(schedule?.startTime ?? '09:00');
+      setEndTime(schedule?.endTime ?? '17:00');
     }
   }, [visible, schedule]);
 
@@ -137,6 +151,7 @@ export function ScheduleForm({ visible, schedule, onSave, onDelete, onClose }: S
       enabled,
       days,
       startTime,
+      endTime,
     });
     onClose();
   };
@@ -145,19 +160,24 @@ export function ScheduleForm({ visible, schedule, onSave, onDelete, onClose }: S
     <Modal visible={visible} animationType="slide" presentationStyle="pageSheet">
       <SafeAreaView style={styles.container} edges={['top', 'bottom']}>
         <View style={styles.header}>
-          <TouchableOpacity onPress={onClose}>
+          <TouchableOpacity onPress={onClose} hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}>
             <Text style={styles.cancelButton}>Cancel</Text>
           </TouchableOpacity>
           <Text style={styles.title}>{isEditing ? 'Edit Schedule' : 'New Schedule'}</Text>
-          <TouchableOpacity onPress={handleSave}>
+          <TouchableOpacity onPress={handleSave} hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}>
             <Text style={styles.saveButton}>Save</Text>
           </TouchableOpacity>
         </View>
 
-        <View style={styles.content}>
-          <View style={styles.section}>
+        <ScrollView style={styles.content} contentContainerStyle={styles.contentContainer}>
+          <View style={styles.card}>
             <View style={styles.enabledRow}>
-              <Text style={styles.enabledLabel}>Enabled</Text>
+              <View style={styles.enabledInfo}>
+                <Text style={styles.enabledLabel}>Schedule Active</Text>
+                <Text style={styles.enabledDescription}>
+                  Enable or disable this schedule
+                </Text>
+              </View>
               <Switch
                 value={enabled}
                 onValueChange={setEnabled}
@@ -167,8 +187,8 @@ export function ScheduleForm({ visible, schedule, onSave, onDelete, onClose }: S
             </View>
           </View>
 
-          <View style={styles.section}>
-            <Text style={styles.sectionTitle}>Days</Text>
+          <View style={styles.card}>
+            <Text style={styles.cardTitle}>Days</Text>
             <View style={styles.daysRow}>
               {DAYS_OF_WEEK.map((day) => (
                 <TouchableOpacity
@@ -192,29 +212,60 @@ export function ScheduleForm({ visible, schedule, onSave, onDelete, onClose }: S
             </View>
           </View>
 
-          <View style={styles.section}>
-            <Text style={styles.sectionTitle}>Start Time</Text>
-            <TouchableOpacity
-              style={styles.timeButton}
-              onPress={() => setShowStartPicker(true)}
-            >
-              <Text style={styles.timeValue}>{formatTime(startTime)}</Text>
-              <Ionicons name="chevron-forward" size={20} color="#9ca3af" />
-            </TouchableOpacity>
+          <View style={styles.card}>
+            <Text style={styles.cardTitle}>Time Range</Text>
+            <View style={styles.timeRangeRow}>
+              <TouchableOpacity
+                style={styles.timeButton}
+                onPress={() => setShowStartPicker(true)}
+              >
+                <Text style={styles.timeLabel}>Start</Text>
+                <Text style={styles.timeValue}>{formatTime(startTime)}</Text>
+              </TouchableOpacity>
+
+              <View style={styles.timeArrow}>
+                <Ionicons name="arrow-forward" size={20} color="#9ca3af" />
+              </View>
+
+              <TouchableOpacity
+                style={styles.timeButton}
+                onPress={() => setShowEndPicker(true)}
+              >
+                <Text style={styles.timeLabel}>End</Text>
+                <Text style={styles.timeValue}>{formatTime(endTime)}</Text>
+              </TouchableOpacity>
+            </View>
+
+            {parseInt(startTime.split(':')[0]) > parseInt(endTime.split(':')[0]) && (
+              <View style={styles.overnightBadge}>
+                <Ionicons name="moon-outline" size={14} color="#6366f1" />
+                <Text style={styles.overnightText}>Overnight schedule</Text>
+              </View>
+            )}
           </View>
 
           {isEditing && onDelete && (
             <TouchableOpacity style={styles.deleteButton} onPress={onDelete}>
+              <Ionicons name="trash-outline" size={18} color="#dc2626" />
               <Text style={styles.deleteButtonText}>Delete Schedule</Text>
             </TouchableOpacity>
           )}
-        </View>
+        </ScrollView>
 
         <TimePicker
           visible={showStartPicker}
           value={startTime}
+          title="Start Time"
           onSelect={setStartTime}
           onClose={() => setShowStartPicker(false)}
+        />
+
+        <TimePicker
+          visible={showEndPicker}
+          value={endTime}
+          title="End Time"
+          onSelect={setEndTime}
+          onClose={() => setShowEndPicker(false)}
         />
       </SafeAreaView>
     </Modal>
@@ -224,7 +275,7 @@ export function ScheduleForm({ visible, schedule, onSave, onDelete, onClose }: S
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#fff',
+    backgroundColor: '#f3f4f6',
   },
   header: {
     flexDirection: 'row',
@@ -232,6 +283,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     paddingHorizontal: 16,
     paddingVertical: 12,
+    backgroundColor: '#fff',
     borderBottomWidth: 1,
     borderBottomColor: '#e5e7eb',
   },
@@ -252,38 +304,50 @@ const styles = StyleSheet.create({
   },
   content: {
     flex: 1,
+  },
+  contentContainer: {
     padding: 16,
+    paddingBottom: 32,
   },
-  section: {
-    marginBottom: 24,
+  card: {
+    backgroundColor: '#fff',
+    borderRadius: 12,
+    padding: 16,
+    marginBottom: 16,
   },
-  sectionTitle: {
+  cardTitle: {
     fontSize: 14,
     fontWeight: '600',
     color: '#6b7280',
     marginBottom: 12,
-    textTransform: 'uppercase',
   },
   enabledRow: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    backgroundColor: '#f3f4f6',
-    borderRadius: 8,
-    padding: 16,
+  },
+  enabledInfo: {
+    flex: 1,
+    marginRight: 16,
   },
   enabledLabel: {
     fontSize: 16,
+    fontWeight: '500',
     color: '#111827',
+  },
+  enabledDescription: {
+    fontSize: 13,
+    color: '#6b7280',
+    marginTop: 2,
   },
   daysRow: {
     flexDirection: 'row',
     justifyContent: 'space-between',
   },
   dayButton: {
-    width: 44,
-    height: 44,
-    borderRadius: 22,
+    width: 40,
+    height: 40,
+    borderRadius: 20,
     backgroundColor: '#f3f4f6',
     alignItems: 'center',
     justifyContent: 'center',
@@ -292,24 +356,22 @@ const styles = StyleSheet.create({
     backgroundColor: '#3b82f6',
   },
   dayButtonText: {
-    fontSize: 13,
+    fontSize: 12,
     fontWeight: '600',
     color: '#374151',
   },
   dayButtonTextSelected: {
     color: '#fff',
   },
-  timeRow: {
+  timeRangeRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    justifyContent: 'space-between',
-    gap: 12,
   },
   timeButton: {
     flex: 1,
     backgroundColor: '#f3f4f6',
-    borderRadius: 8,
-    padding: 16,
+    borderRadius: 10,
+    padding: 14,
     alignItems: 'center',
   },
   timeLabel: {
@@ -322,12 +384,34 @@ const styles = StyleSheet.create({
     fontWeight: '600',
     color: '#111827',
   },
-  deleteButton: {
-    backgroundColor: '#fee2e2',
-    borderRadius: 8,
-    padding: 16,
+  timeArrow: {
+    paddingHorizontal: 12,
+  },
+  overnightBadge: {
+    flexDirection: 'row',
     alignItems: 'center',
-    marginTop: 24,
+    justifyContent: 'center',
+    marginTop: 12,
+    paddingVertical: 8,
+    paddingHorizontal: 12,
+    backgroundColor: '#eef2ff',
+    borderRadius: 8,
+    gap: 6,
+  },
+  overnightText: {
+    fontSize: 13,
+    color: '#6366f1',
+    fontWeight: '500',
+  },
+  deleteButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: '#fee2e2',
+    borderRadius: 12,
+    padding: 16,
+    marginTop: 8,
+    gap: 8,
   },
   deleteButtonText: {
     fontSize: 16,
@@ -346,7 +430,7 @@ const styles = StyleSheet.create({
     borderRadius: 16,
     padding: 20,
     width: '100%',
-    maxWidth: 300,
+    maxWidth: 320,
   },
   pickerTitle: {
     fontSize: 18,
@@ -357,9 +441,9 @@ const styles = StyleSheet.create({
   },
   timePickerRow: {
     flexDirection: 'row',
-    alignItems: 'center',
+    alignItems: 'flex-start',
     justifyContent: 'center',
-    gap: 8,
+    gap: 12,
   },
   timeColumn: {
     alignItems: 'center',
@@ -369,17 +453,19 @@ const styles = StyleSheet.create({
     color: '#6b7280',
     marginBottom: 8,
   },
+  timeScroll: {
+    maxHeight: 200,
+  },
   timeOptions: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    justifyContent: 'center',
     gap: 4,
-    maxWidth: 100,
+  },
+  timeOptionsSmall: {
+    gap: 4,
   },
   timeOption: {
-    width: 44,
-    height: 36,
-    borderRadius: 6,
+    width: 56,
+    height: 44,
+    borderRadius: 8,
     backgroundColor: '#f3f4f6',
     alignItems: 'center',
     justifyContent: 'center',
@@ -388,7 +474,7 @@ const styles = StyleSheet.create({
     backgroundColor: '#3b82f6',
   },
   timeOptionText: {
-    fontSize: 14,
+    fontSize: 16,
     color: '#374151',
   },
   timeOptionTextSelected: {
@@ -399,7 +485,7 @@ const styles = StyleSheet.create({
     fontSize: 24,
     fontWeight: '600',
     color: '#374151',
-    marginTop: 20,
+    marginTop: 28,
   },
   pickerButtons: {
     flexDirection: 'row',

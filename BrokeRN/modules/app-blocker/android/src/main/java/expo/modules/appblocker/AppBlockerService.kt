@@ -32,6 +32,7 @@ class AppBlockerService : AccessibilityService() {
         val enabled: Boolean,
         val days: List<Int>,
         val startTime: String,
+        val endTime: String,
         val blockedPackages: List<String>,
         val blockedCategories: List<Int>,
         val blockedAppNames: List<String>
@@ -145,6 +146,12 @@ class AppBlockerService : AccessibilityService() {
                 .putStringSet(KEY_BLOCKED_APP_NAMES, blockedAppNames)
                 .putBoolean(KEY_IS_BLOCKING, true)
                 .apply()
+        } else if (activeSchedule == null && isBlocking && !manualLock) {
+            // No active schedule and not manually locked - disable blocking
+            isBlocking = false
+            prefs.edit()
+                .putBoolean(KEY_IS_BLOCKING, false)
+                .apply()
         }
     }
 
@@ -157,8 +164,17 @@ class AppBlockerService : AccessibilityService() {
 
         return schedules
             .filter { it.enabled && it.days.contains(currentDay) }
-            .filter { parseTimeToMinutes(it.startTime) <= currentMinutes }
-            .maxByOrNull { parseTimeToMinutes(it.startTime) }
+            .filter { isTimeInRange(currentMinutes, parseTimeToMinutes(it.startTime), parseTimeToMinutes(it.endTime)) }
+            .firstOrNull()
+    }
+
+    private fun isTimeInRange(current: Int, start: Int, end: Int): Boolean {
+        // Handle overnight schedules (e.g., 22:00 - 06:00)
+        return if (start > end) {
+            current >= start || current < end
+        } else {
+            current >= start && current < end
+        }
     }
 
     private fun parseTimeToMinutes(time: String): Int {
@@ -206,6 +222,7 @@ class AppBlockerService : AccessibilityService() {
                         enabled = obj.getBoolean("enabled"),
                         days = days,
                         startTime = obj.getString("startTime"),
+                        endTime = obj.optString("endTime", "23:59"),
                         blockedPackages = packages,
                         blockedCategories = categories,
                         blockedAppNames = appNames

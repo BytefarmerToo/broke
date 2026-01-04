@@ -14,6 +14,7 @@ export interface NativeSchedule {
   enabled: boolean;
   days: number[];
   startTime: string;
+  endTime: string;
   blockedPackages: string[];
   blockedCategories: number[];
   blockedAppNames: string[];

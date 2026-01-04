@@ -283,6 +283,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
         enabled: schedule.enabled,
         days: schedule.days,
         startTime: schedule.startTime,
+        endTime: schedule.endTime || '23:59',
         blockedPackages: profile.blockedApps,
         blockedCategories: profile.blockedCategories,
         blockedAppNames: [],
