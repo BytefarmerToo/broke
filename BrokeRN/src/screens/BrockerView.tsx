@@ -378,10 +378,7 @@ export function BrockerView() {
               : "Hold to lock"}
           </Text>
           {isBlocking && nfcSupported && !isHolding && (
-            <View style={styles.nfcHint}>
-              <Ionicons name="scan-outline" size={14} color="rgba(255, 255, 255, 0.7)" />
-              <Text style={styles.nfcHintText}>or scan NFC tag</Text>
-            </View>
+            <Text style={styles.nfcHintText}>or scan NFC tag</Text>
           )}
           {currentProfile && (
             <Text style={styles.profileText}>{currentProfile.name}</Text>
@@ -496,13 +493,8 @@ const styles = StyleSheet.create({
     color: "rgba(255, 255, 255, 0.6)",
     marginTop: 8,
   },
-  nfcHint: {
-    flexDirection: "row",
-    alignItems: "center",
-    marginTop: 8,
-    gap: 4,
-  },
   nfcHintText: {
+    marginTop: 8,
     fontSize: 14,
     color: "rgba(255, 255, 255, 0.7)",
   },
