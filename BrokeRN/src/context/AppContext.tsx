@@ -235,9 +235,6 @@ export function AppProvider({ children }: { children: ReactNode }) {
 
       setProfiles(loadedProfiles);
 
-      const savedBlocking = blockingState === 'true';
-      setIsBlocking(savedBlocking);
-
       // Schedule is enabled by default
       setScheduleEnabledState(scheduleState !== 'false');
 
@@ -249,12 +246,19 @@ export function AppProvider({ children }: { children: ReactNode }) {
         setUnlockHoldDurationState(parseInt(unlockDuration, 10));
       }
 
-      // Sync with native blocker on Android
+      // Sync blocking state with native on Android
       if (Platform.OS === 'android') {
-        await appBlocker.setBlocking(savedBlocking);
+        // Read blocking state FROM native (it may have been set by a schedule)
+        const nativeBlocking = appBlocker.getBlocking();
+        setIsBlocking(nativeBlocking);
+        await AsyncStorage.setItem(STORAGE_KEYS.IS_BLOCKING, String(nativeBlocking));
+
         await appBlocker.setScheduleEnabled(scheduleState !== 'false');
-        const isEnabled = await appBlocker.isAccessibilityEnabled();
+        const isEnabled = appBlocker.isAccessibilityEnabled();
         setAccessibilityEnabled(isEnabled);
+      } else {
+        const savedBlocking = blockingState === 'true';
+        setIsBlocking(savedBlocking);
       }
     } catch (error) {
       console.error('Error loading data:', error);
@@ -292,6 +296,33 @@ export function AppProvider({ children }: { children: ReactNode }) {
 
     await appBlocker.setSchedules(nativeSchedules);
   }, []);
+
+  // Sync blocking state from native when app comes to foreground
+  const syncBlockingStateFromNative = useCallback(async () => {
+    if (Platform.OS !== 'android') return;
+
+    const nativeBlocking = appBlocker.getBlocking();
+    if (nativeBlocking !== isBlocking) {
+      setIsBlocking(nativeBlocking);
+      await AsyncStorage.setItem(STORAGE_KEYS.IS_BLOCKING, String(nativeBlocking));
+    }
+
+    const isEnabled = appBlocker.isAccessibilityEnabled();
+    setAccessibilityEnabled(isEnabled);
+  }, [isBlocking]);
+
+  // Listen for app state changes to sync with native
+  useEffect(() => {
+    if (Platform.OS !== 'android') return;
+
+    const subscription = AppState.addEventListener('change', (nextAppState) => {
+      if (nextAppState === 'active') {
+        syncBlockingStateFromNative();
+      }
+    });
+
+    return () => subscription.remove();
+  }, [syncBlockingStateFromNative]);
 
   // Sync schedules to native whenever profiles change
   useEffect(() => {
