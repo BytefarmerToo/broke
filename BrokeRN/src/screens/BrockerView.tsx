@@ -21,6 +21,7 @@ import { SettingsModal } from "../components/SettingsModal";
 import { CircularProgress } from "../components/CircularProgress";
 import { initNfc, readNfcTag, cleanupNfc } from "../utils/nfc";
 import { Profile } from "../types/Profile";
+import { StatusBar } from "react-native";
 
 const COLORS = {
   blocking: "#ef4444",
@@ -241,6 +242,11 @@ export function BrockerView() {
 
   return (
     <SafeAreaView style={styles.container} edges={["top"]}>
+      <StatusBar
+        backgroundColor="white"
+        barStyle="dark-content" // Use "light-content" for dark backgrounds
+        translucent={false}
+      />
       <View style={[styles.header, { backgroundColor }]}>
         <Text style={styles.headerTitle}>Broke</Text>
         {!isBlocking && (
