@@ -1,0 +1,4 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_blocker_service_description">Broke uses this service to block apps when blocking mode is enabled. When you open a blocked app, Broke will automatically return you to the home screen.</string>
+</resources>

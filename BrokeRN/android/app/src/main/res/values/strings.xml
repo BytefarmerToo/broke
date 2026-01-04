@@ -2,5 +2,4 @@
   <string name="app_name">Broke</string>
   <string name="expo_splash_screen_resize_mode" translatable="false">contain</string>
   <string name="expo_splash_screen_status_bar_translucent" translatable="false">false</string>
-  <string name="accessibility_service_description">Broke uses this service to block apps when blocking mode is enabled. When you open a blocked app, Broke will automatically return you to the home screen.</string>
 </resources>

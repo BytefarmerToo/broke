@@ -1,9 +1,63 @@
+export interface Schedule {
+  id: string;
+  enabled: boolean;
+  days: number[]; // 0 = Sunday, 1 = Monday, ..., 6 = Saturday
+  startTime: string; // "HH:MM" format (24-hour)
+  endTime: string; // "HH:MM" format (24-hour)
+}
+
 export interface Profile {
   id: string;
   name: string;
   icon: string;
   blockedApps: string[];
   blockedCategories: string[];
+  schedules?: Schedule[];
+}
+
+export const DAYS_OF_WEEK = [
+  { id: 0, short: 'Sun', long: 'Sunday' },
+  { id: 1, short: 'Mon', long: 'Monday' },
+  { id: 2, short: 'Tue', long: 'Tuesday' },
+  { id: 3, short: 'Wed', long: 'Wednesday' },
+  { id: 4, short: 'Thu', long: 'Thursday' },
+  { id: 5, short: 'Fri', long: 'Friday' },
+  { id: 6, short: 'Sat', long: 'Saturday' },
+];
+
+export function createDefaultSchedule(): Schedule {
+  return {
+    id: generateId(),
+    enabled: true,
+    days: [1, 2, 3, 4, 5], // Weekdays by default
+    startTime: '09:00',
+    endTime: '17:00',
+  };
+}
+
+export function isScheduleActive(schedule: Schedule): boolean {
+  if (!schedule.enabled) return false;
+
+  const now = new Date();
+  const currentDay = now.getDay();
+  const currentTime = `${now.getHours().toString().padStart(2, '0')}:${now.getMinutes().toString().padStart(2, '0')}`;
+
+  if (!schedule.days.includes(currentDay)) return false;
+
+  // Handle overnight schedules (e.g., 22:00 - 06:00)
+  if (schedule.startTime > schedule.endTime) {
+    return currentTime >= schedule.startTime || currentTime < schedule.endTime;
+  }
+
+  return currentTime >= schedule.startTime && currentTime < schedule.endTime;
+}
+
+export function formatTime(time: string): string {
+  const [hours, minutes] = time.split(':');
+  const hour = parseInt(hours, 10);
+  const ampm = hour >= 12 ? 'PM' : 'AM';
+  const hour12 = hour % 12 || 12;
+  return `${hour12}:${minutes} ${ampm}`;
 }
 
 export const DEFAULT_ICONS = [

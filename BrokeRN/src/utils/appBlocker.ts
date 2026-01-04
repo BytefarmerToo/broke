@@ -1,30 +1,19 @@
-import { NativeModules, Platform } from 'react-native';
+import { Platform } from 'react-native';
+import * as AppBlockerModule from '../../modules/app-blocker';
 
-interface InstalledApp {
+export interface InstalledApp {
   packageName: string;
   name: string;
   isSystem: boolean;
 }
 
-interface AppBlockerInterface {
-  isAccessibilityEnabled(): Promise<boolean>;
-  openAccessibilitySettings(): Promise<boolean>;
-  setBlocking(isBlocking: boolean): Promise<boolean>;
-  isBlocking(): Promise<boolean>;
-  setBlockedPackages(packages: string[]): Promise<boolean>;
-  getBlockedPackages(): Promise<string[]>;
-  getInstalledApps(): Promise<InstalledApp[]>;
-}
-
-const { AppBlocker: NativeAppBlocker } = NativeModules;
-
 class AppBlockerManager {
   private isAndroid = Platform.OS === 'android';
 
-  async isAccessibilityEnabled(): Promise<boolean> {
+  isAccessibilityEnabled(): boolean {
     if (!this.isAndroid) return false;
     try {
-      return await NativeAppBlocker.isAccessibilityEnabled();
+      return AppBlockerModule.isAccessibilityEnabled();
     } catch (error) {
       console.error('Error checking accessibility:', error);
       return false;
@@ -34,7 +23,7 @@ class AppBlockerManager {
   async openAccessibilitySettings(): Promise<boolean> {
     if (!this.isAndroid) return false;
     try {
-      return await NativeAppBlocker.openAccessibilitySettings();
+      return await AppBlockerModule.openAccessibilitySettings();
     } catch (error) {
       console.error('Error opening settings:', error);
       return false;
@@ -44,17 +33,17 @@ class AppBlockerManager {
   async setBlocking(isBlocking: boolean): Promise<boolean> {
     if (!this.isAndroid) return true;
     try {
-      return await NativeAppBlocker.setBlocking(isBlocking);
+      return await AppBlockerModule.setBlocking(isBlocking);
     } catch (error) {
       console.error('Error setting blocking state:', error);
       return false;
     }
   }
 
-  async getBlocking(): Promise<boolean> {
+  getBlocking(): boolean {
     if (!this.isAndroid) return false;
     try {
-      return await NativeAppBlocker.isBlocking();
+      return AppBlockerModule.isBlocking();
     } catch (error) {
       console.error('Error getting blocking state:', error);
       return false;
@@ -64,29 +53,29 @@ class AppBlockerManager {
   async setBlockedPackages(packages: string[]): Promise<boolean> {
     if (!this.isAndroid) return true;
     try {
-      return await NativeAppBlocker.setBlockedPackages(packages);
+      return await AppBlockerModule.setBlockedPackages(packages);
     } catch (error) {
       console.error('Error setting blocked packages:', error);
       return false;
     }
   }
 
-  async getBlockedPackages(): Promise<string[]> {
+  getBlockedPackages(): string[] {
     if (!this.isAndroid) return [];
     try {
-      return await NativeAppBlocker.getBlockedPackages();
+      return AppBlockerModule.getBlockedPackages();
     } catch (error) {
       console.error('Error getting blocked packages:', error);
       return [];
     }
   }
 
-  async getInstalledApps(): Promise<InstalledApp[]> {
+  getInstalledApps(): InstalledApp[] {
     if (!this.isAndroid) return [];
     try {
-      const apps = await NativeAppBlocker.getInstalledApps();
-      // Sort by name, include all launchable apps (don't filter system apps)
-      return apps.sort((a: InstalledApp, b: InstalledApp) =>
+      const apps = AppBlockerModule.getInstalledApps();
+      // Sort by name, include all launchable apps
+      return apps.sort((a, b) =>
         a.name.toLowerCase().localeCompare(b.name.toLowerCase())
       );
     } catch (error) {
@@ -96,9 +85,8 @@ class AppBlockerManager {
   }
 
   isSupported(): boolean {
-    return this.isAndroid && NativeAppBlocker != null;
+    return this.isAndroid;
   }
 }
 
 export const appBlocker = new AppBlockerManager();
-export type { InstalledApp };

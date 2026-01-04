@@ -14,9 +14,10 @@ import {
   ActivityIndicator,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
-import { Profile, DEFAULT_ICONS, APP_CATEGORIES, SAMPLE_APPS, generateId } from '../types/Profile';
+import { Profile, Schedule, DEFAULT_ICONS, APP_CATEGORIES, SAMPLE_APPS, generateId, DAYS_OF_WEEK, formatTime } from '../types/Profile';
 import { useApp } from '../context/AppContext';
 import { appBlocker, InstalledApp } from '../utils/appBlocker';
+import { ScheduleForm } from './ScheduleForm';
 
 interface ProfileFormProps {
   visible: boolean;
@@ -38,6 +39,9 @@ export function ProfileForm({ visible, profile, onClose }: ProfileFormProps) {
   const [installedApps, setInstalledApps] = useState<InstalledApp[]>([]);
   const [loadingApps, setLoadingApps] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
+  const [schedules, setSchedules] = useState<Schedule[]>([]);
+  const [showScheduleForm, setShowScheduleForm] = useState(false);
+  const [editingSchedule, setEditingSchedule] = useState<Schedule | null>(null);
 
   useEffect(() => {
     if (profile) {
@@ -45,11 +49,13 @@ export function ProfileForm({ visible, profile, onClose }: ProfileFormProps) {
       setIcon(profile.icon);
       setBlockedApps(profile.blockedApps);
       setBlockedCategories(profile.blockedCategories);
+      setSchedules(profile.schedules || []);
     } else {
       setName('');
       setIcon('lock-closed');
       setBlockedApps([]);
       setBlockedCategories([]);
+      setSchedules([]);
     }
   }, [profile, visible]);
 
@@ -83,6 +89,7 @@ export function ProfileForm({ visible, profile, onClose }: ProfileFormProps) {
       icon,
       blockedApps,
       blockedCategories,
+      schedules,
     };
 
     if (isEditing) {
@@ -92,6 +99,32 @@ export function ProfileForm({ visible, profile, onClose }: ProfileFormProps) {
     }
 
     onClose();
+  };
+
+  const handleSaveSchedule = (schedule: Schedule) => {
+    setSchedules((prev) => {
+      const exists = prev.find((s) => s.id === schedule.id);
+      if (exists) {
+        return prev.map((s) => (s.id === schedule.id ? schedule : s));
+      }
+      return [...prev, schedule];
+    });
+    setEditingSchedule(null);
+  };
+
+  const handleDeleteSchedule = () => {
+    if (editingSchedule) {
+      setSchedules((prev) => prev.filter((s) => s.id !== editingSchedule.id));
+      setEditingSchedule(null);
+      setShowScheduleForm(false);
+    }
+  };
+
+  const formatScheduleDays = (days: number[]) => {
+    if (days.length === 7) return 'Every day';
+    if (days.length === 5 && !days.includes(0) && !days.includes(6)) return 'Weekdays';
+    if (days.length === 2 && days.includes(0) && days.includes(6)) return 'Weekends';
+    return days.map((d) => DAYS_OF_WEEK[d].short).join(', ');
   };
 
   const handleDelete = () => {
@@ -262,6 +295,55 @@ export function ProfileForm({ visible, profile, onClose }: ProfileFormProps) {
             )}
           </View>
 
+          <View style={styles.section}>
+            <Text style={styles.sectionTitle}>
+              Auto-Schedule {schedules.length > 0 && `(${schedules.length})`}
+            </Text>
+            {schedules.map((schedule) => (
+              <TouchableOpacity
+                key={schedule.id}
+                style={[
+                  styles.scheduleItem,
+                  !schedule.enabled && styles.scheduleItemDisabled,
+                ]}
+                onPress={() => {
+                  setEditingSchedule(schedule);
+                  setShowScheduleForm(true);
+                }}
+              >
+                <View style={styles.scheduleInfo}>
+                  <Text style={[
+                    styles.scheduleTime,
+                    !schedule.enabled && styles.scheduleTextDisabled,
+                  ]}>
+                    {formatTime(schedule.startTime)} - {formatTime(schedule.endTime)}
+                  </Text>
+                  <Text style={[
+                    styles.scheduleDays,
+                    !schedule.enabled && styles.scheduleTextDisabled,
+                  ]}>
+                    {formatScheduleDays(schedule.days)}
+                  </Text>
+                </View>
+                <Ionicons
+                  name={schedule.enabled ? 'checkmark-circle' : 'ellipse-outline'}
+                  size={24}
+                  color={schedule.enabled ? '#22c55e' : '#9ca3af'}
+                />
+              </TouchableOpacity>
+            ))}
+            <TouchableOpacity
+              style={styles.addScheduleButton}
+              onPress={() => {
+                setEditingSchedule(null);
+                setShowScheduleForm(true);
+              }}
+            >
+              <Ionicons name="add-circle-outline" size={24} color="#3b82f6" />
+              <Text style={styles.addScheduleText}>Add Schedule</Text>
+            </TouchableOpacity>
+          </View>
+
           {isEditing && (
             <TouchableOpacity style={styles.deleteButton} onPress={handleDelete}>
               <Text style={styles.deleteButtonText}>Delete Profile</Text>
@@ -348,6 +430,17 @@ export function ProfileForm({ visible, profile, onClose }: ProfileFormProps) {
             )}
           </SafeAreaView>
         </Modal>
+
+        <ScheduleForm
+          visible={showScheduleForm}
+          schedule={editingSchedule}
+          onSave={handleSaveSchedule}
+          onDelete={editingSchedule ? handleDeleteSchedule : undefined}
+          onClose={() => {
+            setShowScheduleForm(false);
+            setEditingSchedule(null);
+          }}
+        />
       </SafeAreaView>
     </Modal>
   );
@@ -593,5 +686,46 @@ const styles = StyleSheet.create({
   },
   separator: {
     height: 8,
+  },
+  scheduleItem: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#f3f4f6',
+    borderRadius: 8,
+    padding: 16,
+    marginBottom: 8,
+  },
+  scheduleItemDisabled: {
+    opacity: 0.6,
+  },
+  scheduleInfo: {
+    flex: 1,
+  },
+  scheduleTime: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: '#111827',
+  },
+  scheduleDays: {
+    fontSize: 14,
+    color: '#6b7280',
+    marginTop: 2,
+  },
+  scheduleTextDisabled: {
+    color: '#9ca3af',
+  },
+  addScheduleButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: '#eff6ff',
+    borderRadius: 8,
+    padding: 16,
+    gap: 8,
+  },
+  addScheduleText: {
+    fontSize: 16,
+    color: '#3b82f6',
+    fontWeight: '500',
   },
 });

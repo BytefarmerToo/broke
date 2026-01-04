@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef, useCallback } from 'react';
 import {
   View,
   Text,
@@ -9,6 +9,7 @@ import {
   Dimensions,
   Platform,
   AppState,
+  Pressable,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
@@ -16,6 +17,8 @@ import * as Haptics from 'expo-haptics';
 import { useApp } from '../context/AppContext';
 import { ProfilePicker } from '../components/ProfilePicker';
 import { ProfileForm } from '../components/ProfileForm';
+import { SettingsModal } from '../components/SettingsModal';
+import { CircularProgress } from '../components/CircularProgress';
 import { initNfc, readNfcTag, writeNfcTag, cleanupNfc } from '../utils/nfc';
 import { Profile } from '../types/Profile';
 
@@ -35,18 +38,124 @@ export function BrockerView() {
     accessibilityEnabled,
     checkAccessibility,
     openAccessibilitySettings,
+    activeScheduleProfile,
+    scheduleEnabled,
+    lockHoldDuration,
+    unlockHoldDuration,
   } = useApp();
 
   const [nfcSupported, setNfcSupported] = useState(true);
   const [isScanning, setIsScanning] = useState(false);
   const [showProfileForm, setShowProfileForm] = useState(false);
+  const [showSettings, setShowSettings] = useState(false);
   const [editingProfile, setEditingProfile] = useState<Profile | null>(null);
   const [buttonScale] = useState(new Animated.Value(1));
+  const [holdProgress, setHoldProgress] = useState(0);
+  const [isHolding, setIsHolding] = useState(false);
+  const holdIntervalRef = useRef<NodeJS.Timeout | null>(null);
+  const holdStartTimeRef = useRef<number | null>(null);
 
   useEffect(() => {
     initNfc().then(setNfcSupported);
     return () => cleanupNfc();
   }, []);
+
+  // Clean up hold interval on unmount
+  useEffect(() => {
+    return () => {
+      if (holdIntervalRef.current) {
+        clearInterval(holdIntervalRef.current);
+      }
+    };
+  }, []);
+
+  const currentHoldDuration = isBlocking ? unlockHoldDuration : lockHoldDuration;
+
+  const stopHold = useCallback(() => {
+    if (holdIntervalRef.current) {
+      clearInterval(holdIntervalRef.current);
+      holdIntervalRef.current = null;
+    }
+    holdStartTimeRef.current = null;
+    setIsHolding(false);
+    setHoldProgress(0);
+  }, []);
+
+  const startHold = useCallback(() => {
+    if (!currentProfile) {
+      Alert.alert('No Profile', 'Please select a profile first');
+      return;
+    }
+
+    if (Platform.OS === 'android' && !accessibilityEnabled) {
+      Alert.alert(
+        'Accessibility Required',
+        'Broke needs Accessibility Service permission to block apps. Would you like to enable it now?',
+        [
+          { text: 'Cancel', style: 'cancel' },
+          {
+            text: 'Open Settings',
+            onPress: openAccessibilitySettings,
+          },
+        ]
+      );
+      return;
+    }
+
+    setIsHolding(true);
+    holdStartTimeRef.current = Date.now();
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+
+    const updateInterval = 50; // Update every 50ms for smooth animation
+    holdIntervalRef.current = setInterval(() => {
+      if (!holdStartTimeRef.current) return;
+
+      const elapsed = (Date.now() - holdStartTimeRef.current) / 1000;
+      const progress = Math.min(elapsed / currentHoldDuration, 1);
+      setHoldProgress(progress);
+
+      if (progress >= 1) {
+        stopHold();
+        handleToggleComplete();
+      }
+    }, updateInterval);
+  }, [currentProfile, accessibilityEnabled, currentHoldDuration, openAccessibilitySettings, stopHold]);
+
+  const handleToggleComplete = async () => {
+    Haptics.notificationAsync(
+      isBlocking
+        ? Haptics.NotificationFeedbackType.Success
+        : Haptics.NotificationFeedbackType.Warning
+    );
+
+    animateButton();
+
+    if (!nfcSupported) {
+      await toggleBlocking();
+      return;
+    }
+
+    setIsScanning(true);
+
+    try {
+      const result = await readNfcTag();
+
+      if (!result.success) {
+        if (!result.message?.includes('cancelled')) {
+          Alert.alert('NFC Error', result.message);
+        }
+        return;
+      }
+
+      if (result.isValid) {
+        await toggleBlocking();
+      } else {
+        Alert.alert('Invalid Tag', 'This is not a Broke tag. Use the + button to create one.');
+      }
+    } finally {
+      setIsScanning(false);
+    }
+  };
 
   // Re-check accessibility when app comes to foreground
   useEffect(() => {
@@ -74,68 +183,6 @@ export function BrockerView() {
         useNativeDriver: true,
       }),
     ]).start();
-  };
-
-  const handleToggle = async () => {
-    if (!currentProfile) {
-      Alert.alert('No Profile', 'Please select a profile first');
-      return;
-    }
-
-    // Check accessibility on Android
-    if (Platform.OS === 'android' && !accessibilityEnabled) {
-      Alert.alert(
-        'Accessibility Required',
-        'Broke needs Accessibility Service permission to block apps. Would you like to enable it now?',
-        [
-          { text: 'Cancel', style: 'cancel' },
-          {
-            text: 'Open Settings',
-            onPress: openAccessibilitySettings,
-          },
-        ]
-      );
-      return;
-    }
-
-    animateButton();
-    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
-
-    if (!nfcSupported) {
-      await toggleBlocking();
-      Haptics.notificationAsync(
-        isBlocking
-          ? Haptics.NotificationFeedbackType.Success
-          : Haptics.NotificationFeedbackType.Warning
-      );
-      return;
-    }
-
-    setIsScanning(true);
-
-    try {
-      const result = await readNfcTag();
-
-      if (!result.success) {
-        if (!result.message?.includes('cancelled')) {
-          Alert.alert('NFC Error', result.message);
-        }
-        return;
-      }
-
-      if (result.isValid) {
-        await toggleBlocking();
-        Haptics.notificationAsync(
-          isBlocking
-            ? Haptics.NotificationFeedbackType.Success
-            : Haptics.NotificationFeedbackType.Warning
-        );
-      } else {
-        Alert.alert('Invalid Tag', 'This is not a Broke tag. Use the + button to create one.');
-      }
-    } finally {
-      setIsScanning(false);
-    }
   };
 
   const handleWriteTag = async () => {
@@ -190,18 +237,12 @@ export function BrockerView() {
       <View style={[styles.header, { backgroundColor }]}>
         <Text style={styles.headerTitle}>Broke</Text>
         <View style={styles.headerButtons}>
-          {Platform.OS === 'android' && (
-            <TouchableOpacity
-              onPress={openAccessibilitySettings}
-              style={styles.headerButton}
-            >
-              <Ionicons
-                name="settings-outline"
-                size={24}
-                color={accessibilityEnabled ? '#fff' : 'rgba(255,255,255,0.5)'}
-              />
-            </TouchableOpacity>
-          )}
+          <TouchableOpacity
+            onPress={() => setShowSettings(true)}
+            style={styles.headerButton}
+          >
+            <Ionicons name="settings-outline" size={24} color="#fff" />
+          </TouchableOpacity>
           {nfcSupported && (
             <TouchableOpacity onPress={handleWriteTag} style={styles.headerButton}>
               <Ionicons name="add" size={28} color="#fff" />
@@ -233,31 +274,49 @@ export function BrockerView() {
           },
         ]}
       >
-        <TouchableOpacity
+        <Pressable
           style={styles.toggleButton}
-          onPress={handleToggle}
-          activeOpacity={0.9}
+          onPressIn={startHold}
+          onPressOut={stopHold}
           disabled={isScanning}
         >
-          <Ionicons
-            name={isBlocking ? 'lock-closed' : 'lock-open'}
-            size={80}
+          <CircularProgress
+            size={180}
+            strokeWidth={8}
+            progress={holdProgress}
             color="#fff"
-          />
+            backgroundColor="rgba(255, 255, 255, 0.3)"
+          >
+            <Ionicons
+              name={isBlocking ? 'lock-closed' : 'lock-open'}
+              size={60}
+              color="#fff"
+            />
+          </CircularProgress>
           <Text style={styles.toggleText}>
             {isScanning
               ? 'Scanning...'
+              : isHolding
+              ? `${Math.ceil(currentHoldDuration * (1 - holdProgress))}s`
               : isBlocking
-              ? 'Tap to unblock'
-              : 'Tap to block'}
+              ? 'Hold to unlock'
+              : 'Hold to lock'}
           </Text>
           {currentProfile && (
             <Text style={styles.profileText}>{currentProfile.name}</Text>
           )}
-          {!nfcSupported && (
-            <Text style={styles.nfcWarning}>NFC not available - tap to toggle</Text>
+          {activeScheduleProfile && scheduleEnabled && (
+            <View style={styles.scheduleIndicator}>
+              <Ionicons name="time" size={14} color="rgba(255, 255, 255, 0.8)" />
+              <Text style={styles.scheduleText}>
+                Scheduled: {activeScheduleProfile.name}
+              </Text>
+            </View>
           )}
-        </TouchableOpacity>
+          {!nfcSupported && !isHolding && (
+            <Text style={styles.nfcWarning}>NFC not available</Text>
+          )}
+        </Pressable>
       </Animated.View>
 
       {!isBlocking && (
@@ -271,6 +330,11 @@ export function BrockerView() {
         visible={showProfileForm}
         profile={editingProfile}
         onClose={() => setShowProfileForm(false)}
+      />
+
+      <SettingsModal
+        visible={showSettings}
+        onClose={() => setShowSettings(false)}
       />
     </SafeAreaView>
   );
@@ -341,6 +405,20 @@ const styles = StyleSheet.create({
     fontSize: 12,
     color: 'rgba(255, 255, 255, 0.6)',
     marginTop: 8,
+  },
+  scheduleIndicator: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginTop: 12,
+    backgroundColor: 'rgba(255, 255, 255, 0.2)',
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    borderRadius: 16,
+    gap: 6,
+  },
+  scheduleText: {
+    fontSize: 12,
+    color: 'rgba(255, 255, 255, 0.9)',
   },
   loadingText: {
     fontSize: 18,

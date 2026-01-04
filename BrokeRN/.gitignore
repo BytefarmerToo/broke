@@ -39,6 +39,9 @@ yarn-error.*
 # generated native folders (keeping android for custom native modules)
 /ios
 
+# Expo module build artifacts
+modules/*/android/build/
+
 # Claude Code internal files (keep agents/skills documentation)
 .claude/debug/
 .claude/file-history/
