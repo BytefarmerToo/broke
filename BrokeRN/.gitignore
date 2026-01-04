@@ -38,3 +38,20 @@ yarn-error.*
 
 # generated native folders (keeping android for custom native modules)
 /ios
+
+# Claude Code internal files (keep agents/skills documentation)
+.claude/debug/
+.claude/file-history/
+.claude/history.jsonl
+.claude/ide/
+.claude/plans/
+.claude/plugins/
+.claude/projects/
+.claude/session-env/
+.claude/shell-snapshots/
+.claude/settings.json
+.claude/stats-cache.json
+.claude/statsig/
+.claude/telemetry/
+.claude/todos/
+.claude/agents/*/manifest.json
