@@ -69,9 +69,11 @@ export async function readNfcTag(): Promise<{
     const tag = await NfcManager.getTag();
     console.warn("Tag found", tag);
     return handleTag(tag);
-  } catch (ex) {
-    console.warn("Oops!", ex);
+  } catch (ex: any) {
     console.warn("NFC read error", ex);
+    if (ex?.message?.includes("cancelled")) {
+      return { success: false, isValid: false, message: "NFC read cancelled" };
+    }
     return { success: false, isValid: false, message: "NFC read error" };
   } finally {
     // stop the nfc scanning

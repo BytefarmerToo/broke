@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   View,
   Text,
@@ -8,11 +8,15 @@ import {
   Switch,
   Platform,
   ScrollView,
+  Alert,
+  ActivityIndicator,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import Slider from '@react-native-community/slider';
+import * as Haptics from 'expo-haptics';
 import { useApp } from '../context/AppContext';
+import { initNfc, writeNfcTag } from '../utils/nfc';
 
 interface SettingsModalProps {
   visible: boolean;
@@ -35,13 +39,34 @@ export function SettingsModal({ visible, onClose }: SettingsModalProps) {
 
   const [localLockDuration, setLocalLockDuration] = useState(lockHoldDuration);
   const [localUnlockDuration, setLocalUnlockDuration] = useState(unlockHoldDuration);
+  const [nfcSupported, setNfcSupported] = useState(false);
+  const [isWritingTag, setIsWritingTag] = useState(false);
 
-  React.useEffect(() => {
+  useEffect(() => {
+    initNfc().then(setNfcSupported);
+  }, []);
+
+  useEffect(() => {
     if (visible) {
       setLocalLockDuration(lockHoldDuration);
       setLocalUnlockDuration(unlockHoldDuration);
     }
   }, [visible, lockHoldDuration, unlockHoldDuration]);
+
+  const handleWriteTag = async () => {
+    setIsWritingTag(true);
+    try {
+      const result = await writeNfcTag();
+      if (result.success) {
+        Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+        Alert.alert('Success', result.message);
+      } else if (!result.message.includes('cancelled')) {
+        Alert.alert('Error', result.message);
+      }
+    } finally {
+      setIsWritingTag(false);
+    }
+  };
 
   const handleLockDurationChange = async (value: number) => {
     const rounded = Math.round(value);
@@ -165,6 +190,31 @@ export function SettingsModal({ visible, onClose }: SettingsModalProps) {
                     {accessibilityEnabled ? 'Enabled' : 'Disabled'}
                   </Text>
                   <Ionicons name="chevron-forward" size={20} color="#9ca3af" />
+                </View>
+              </TouchableOpacity>
+            </View>
+          )}
+
+          {nfcSupported && (
+            <View style={styles.section}>
+              <Text style={styles.sectionTitle}>NFC</Text>
+              <TouchableOpacity
+                style={styles.nfcButton}
+                onPress={handleWriteTag}
+                disabled={isWritingTag}
+              >
+                {isWritingTag ? (
+                  <ActivityIndicator size="small" color="#0066cc" />
+                ) : (
+                  <Ionicons name="pricetag-outline" size={22} color="#0066cc" />
+                )}
+                <View style={styles.settingInfo}>
+                  <Text style={styles.nfcButtonLabel}>
+                    {isWritingTag ? 'Hold phone near tag...' : 'Create Unlock Tag'}
+                  </Text>
+                  <Text style={styles.settingDescription}>
+                    Write a Broke signature to an NFC tag
+                  </Text>
                 </View>
               </TouchableOpacity>
             </View>
@@ -307,5 +357,16 @@ const styles = StyleSheet.create({
   },
   permissionDisabled: {
     color: '#ef4444',
+  },
+  nfcButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
+    paddingVertical: 8,
+  },
+  nfcButtonLabel: {
+    fontSize: 16,
+    color: '#0066cc',
+    fontWeight: '500',
   },
 });

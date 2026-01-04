@@ -19,7 +19,7 @@ import { ProfilePicker } from "../components/ProfilePicker";
 import { ProfileForm } from "../components/ProfileForm";
 import { SettingsModal } from "../components/SettingsModal";
 import { CircularProgress } from "../components/CircularProgress";
-import { initNfc, readNfcTag, writeNfcTag, cleanupNfc } from "../utils/nfc";
+import { initNfc, readNfcTag, cleanupNfc } from "../utils/nfc";
 import { Profile } from "../types/Profile";
 
 const COLORS = {
@@ -57,6 +57,7 @@ export function BrockerView() {
   const holdIntervalRef = useRef<NodeJS.Timeout | null>(null);
   const holdStartTimeRef = useRef<number | null>(null);
   const handleToggleCompleteRef = useRef<() => void>(() => {});
+  const nfcCancelledRef = useRef(false);
 
   useEffect(() => {
     initNfc().then(setNfcSupported);
@@ -102,17 +103,20 @@ export function BrockerView() {
 
     // If already scanning, cancel it
     if (isScanning) {
+      nfcCancelledRef.current = true;
       cleanupNfc();
       setIsScanning(false);
       return;
     }
 
+    nfcCancelledRef.current = false;
     setIsScanning(true);
     try {
       const result = await readNfcTag();
 
+      // Don't show error if user intentionally cancelled
       if (!result.success) {
-        if (!result.message?.includes("cancelled")) {
+        if (!nfcCancelledRef.current) {
           Alert.alert("NFC Error", result.message);
         }
         return;
@@ -125,7 +129,7 @@ export function BrockerView() {
       } else {
         Alert.alert(
           "Invalid Tag",
-          "This is not a Broke tag. Use the + button to create one."
+          "This is not a Broke tag. Create one in Settings."
         );
       }
     } finally {
@@ -212,33 +216,6 @@ export function BrockerView() {
     ]).start();
   };
 
-  const handleWriteTag = async () => {
-    Alert.alert(
-      "Create Broke Tag",
-      "Hold your phone near an NFC tag to write the Broke signature.",
-      [
-        { text: "Cancel", style: "cancel" },
-        {
-          text: "Write Tag",
-          onPress: async () => {
-            setIsScanning(true);
-            try {
-              const result = await writeNfcTag();
-              if (result.success) {
-                Haptics.notificationAsync(
-                  Haptics.NotificationFeedbackType.Success
-                );
-              }
-              Alert.alert(result.success ? "Success" : "Error", result.message);
-            } finally {
-              setIsScanning(false);
-            }
-          },
-        },
-      ]
-    );
-  };
-
   const handleNewProfile = () => {
     setEditingProfile(null);
     setShowProfileForm(true);
@@ -266,22 +243,12 @@ export function BrockerView() {
     <SafeAreaView style={styles.container} edges={["top"]}>
       <View style={[styles.header, { backgroundColor }]}>
         <Text style={styles.headerTitle}>Broke</Text>
-        <View style={styles.headerButtons}>
-          <TouchableOpacity
-            onPress={() => setShowSettings(true)}
-            style={styles.headerButton}
-          >
-            <Ionicons name="settings-outline" size={24} color="#fff" />
-          </TouchableOpacity>
-          {nfcSupported && (
-            <TouchableOpacity
-              onPress={handleWriteTag}
-              style={styles.headerButton}
-            >
-              <Ionicons name="add" size={28} color="#fff" />
-            </TouchableOpacity>
-          )}
-        </View>
+        <TouchableOpacity
+          onPress={() => setShowSettings(true)}
+          style={styles.headerButton}
+        >
+          <Ionicons name="settings-outline" size={24} color="#fff" />
+        </TouchableOpacity>
       </View>
 
       {showAccessibilityWarning && (
@@ -427,11 +394,6 @@ const styles = StyleSheet.create({
     fontSize: 24,
     fontWeight: "700",
     color: "#fff",
-  },
-  headerButtons: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 8,
   },
   headerButton: {
     padding: 4,
