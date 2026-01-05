@@ -110,11 +110,8 @@ export function BrockerView() {
       const isActive = nextAppState === "active";
       setAppIsActive(isActive);
 
-      if (isActive) {
-        // Reset cancelled flag when app becomes active
-        nfcCancelledRef.current = false;
-      } else if (isScanning) {
-        // Cancel NFC scanning when going to background
+      // Cancel NFC scanning when going to background
+      if (!isActive && isScanning) {
         nfcCancelledRef.current = true;
         cleanupNfc();
         setIsScanning(false);
