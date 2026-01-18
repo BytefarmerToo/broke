@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, ComponentProps } from 'react';
 import {
   View,
   Text,
@@ -15,6 +15,8 @@ import {
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { Profile, Schedule, DEFAULT_ICONS, APP_CATEGORIES, SAMPLE_APPS, generateId, DAYS_OF_WEEK, formatTime } from '../types/Profile';
+
+type IconName = ComponentProps<typeof Ionicons>['name'];
 import { useApp } from '../context/AppContext';
 import { appBlocker, InstalledApp } from '../utils/appBlocker';
 import { ScheduleForm } from './ScheduleForm';
@@ -221,7 +223,7 @@ export function ProfileForm({ visible, profile, onClose }: ProfileFormProps) {
                   style={styles.iconSelector}
                   onPress={() => setShowIconPicker(true)}
                 >
-                  <Ionicons name={icon as any} size={32} color="#374151" />
+                  <Ionicons name={icon as IconName} size={32} color="#374151" />
                   <Text style={styles.iconSelectorText}>Tap to change</Text>
                 </TouchableOpacity>
               </View>
@@ -239,7 +241,7 @@ export function ProfileForm({ visible, profile, onClose }: ProfileFormProps) {
                       onPress={() => toggleCategory(category.id)}
                     >
                       <Ionicons
-                        name={category.icon as any}
+                        name={category.icon as IconName}
                         size={20}
                         color={blockedCategories.includes(category.id) ? '#fff' : '#374151'}
                       />
@@ -373,7 +375,7 @@ export function ProfileForm({ visible, profile, onClose }: ProfileFormProps) {
                     }}
                   >
                     <Ionicons
-                      name={iconName as any}
+                      name={iconName as IconName}
                       size={28}
                       color={icon === iconName ? '#fff' : '#374151'}
                     />

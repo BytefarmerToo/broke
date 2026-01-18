@@ -61,15 +61,32 @@ function parseTimeToMinutes(time: string): number {
   return hours * 60 + minutes;
 }
 
-// Legacy function for backwards compatibility
-export function hasScheduleStarted(schedule: Schedule): boolean {
-  return isScheduleActive(schedule);
-}
-
 // Returns the start time in minutes for comparison
 export function getScheduleStartMinutes(schedule: Schedule): number {
   const [hours, minutes] = schedule.startTime.split(":").map(Number);
   return hours * 60 + minutes;
+}
+
+// Find the profile with the most recently started active schedule
+export function findActiveScheduleProfile(profiles: Profile[]): Profile | null {
+  let bestProfile: Profile | null = null;
+  let bestStartMinutes = -1;
+
+  for (const profile of profiles) {
+    if (profile.schedules && profile.schedules.length > 0) {
+      for (const schedule of profile.schedules) {
+        if (isScheduleActive(schedule)) {
+          const startMinutes = getScheduleStartMinutes(schedule);
+          if (startMinutes > bestStartMinutes) {
+            bestStartMinutes = startMinutes;
+            bestProfile = profile;
+          }
+        }
+      }
+    }
+  }
+
+  return bestProfile;
 }
 
 export function formatTime(time: string): string {

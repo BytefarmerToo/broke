@@ -1,7 +1,7 @@
 import React, { createContext, useContext, useState, useEffect, useCallback, useRef, ReactNode } from 'react';
 import { Platform, AppState } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import { Profile, createDefaultProfile, hasScheduleStarted, getScheduleStartMinutes } from '../types/Profile';
+import { Profile, createDefaultProfile, findActiveScheduleProfile } from '../types/Profile';
 import { appBlocker, NativeSchedule } from '../utils/appBlocker';
 
 const STORAGE_KEYS = {
@@ -118,24 +118,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
         return;
       }
 
-      // Find all started schedules and pick the one with the latest start time
-      let bestProfile: Profile | null = null;
-      let bestStartMinutes = -1;
-
-      for (const profile of profiles) {
-        if (profile.schedules && profile.schedules.length > 0) {
-          for (const schedule of profile.schedules) {
-            if (hasScheduleStarted(schedule)) {
-              const startMinutes = getScheduleStartMinutes(schedule);
-              if (startMinutes > bestStartMinutes) {
-                bestStartMinutes = startMinutes;
-                bestProfile = profile;
-              }
-            }
-          }
-        }
-      }
-
+      const bestProfile = findActiveScheduleProfile(profiles);
       const previousActiveProfile = activeScheduleProfile;
       const profileChanged = bestProfile?.id !== previousActiveProfile?.id;
 
@@ -255,23 +238,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
 
         // If native is blocking, find the active schedule profile
         if (nativeBlocking && scheduleState !== 'false') {
-          let bestProfile: Profile | null = null;
-          let bestStartMinutes = -1;
-
-          for (const profile of loadedProfiles) {
-            if (profile.schedules && profile.schedules.length > 0) {
-              for (const schedule of profile.schedules) {
-                if (hasScheduleStarted(schedule)) {
-                  const startMinutes = getScheduleStartMinutes(schedule);
-                  if (startMinutes > bestStartMinutes) {
-                    bestStartMinutes = startMinutes;
-                    bestProfile = profile;
-                  }
-                }
-              }
-            }
-          }
-
+          const bestProfile = findActiveScheduleProfile(loadedProfiles);
           if (bestProfile) {
             setActiveScheduleProfile(bestProfile);
           }
@@ -333,23 +300,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
 
     // If native is blocking and we don't have an active schedule profile, find it
     if (nativeBlocking && !activeScheduleProfile && scheduleEnabled) {
-      let bestProfile: Profile | null = null;
-      let bestStartMinutes = -1;
-
-      for (const profile of profiles) {
-        if (profile.schedules && profile.schedules.length > 0) {
-          for (const schedule of profile.schedules) {
-            if (hasScheduleStarted(schedule)) {
-              const startMinutes = getScheduleStartMinutes(schedule);
-              if (startMinutes > bestStartMinutes) {
-                bestStartMinutes = startMinutes;
-                bestProfile = profile;
-              }
-            }
-          }
-        }
-      }
-
+      const bestProfile = findActiveScheduleProfile(profiles);
       if (bestProfile) {
         setActiveScheduleProfile(bestProfile);
       }

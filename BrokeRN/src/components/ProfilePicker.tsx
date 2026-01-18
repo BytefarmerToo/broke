@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { ComponentProps } from 'react';
 import {
   View,
   Text,
@@ -9,6 +9,8 @@ import {
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { Profile } from '../types/Profile';
+
+type IconName = ComponentProps<typeof Ionicons>['name'];
 import { useApp } from '../context/AppContext';
 
 interface ProfilePickerProps {
@@ -40,7 +42,7 @@ export function ProfilePicker({ onNewProfile, onEditProfile }: ProfilePickerProp
             onLongPress={() => onEditProfile(profile)}
           >
             <Ionicons
-              name={profile.icon as any}
+              name={profile.icon as IconName}
               size={28}
               color={currentProfile?.id === profile.id ? '#fff' : '#374151'}
             />
